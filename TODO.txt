@@ -1,0 +1,43 @@
+# TODO
+
+EXPERIMENTS
+ - Describe CD diagrams
+ - Describe SIGIR experiments
+ - Use SIGIR results
+ - Redo null detector
+
+INTRODUCTION
+ - Make sure contributions match results
+
+BACKGROUND
+ - Write conclusion
+ - Table of other drift detectors 
+ - Describe more drift detectors
+ - Theoretical results
+ - Bayesian detectors
+ - Operationalisation
+ - Taxonomic diagram of drift types
+
+MDD
+ - move operationalisation to introduction
+ - make sure the motivation reads as a motivation
+
+CDDM
+ - Neural networks calibrated
+ - Calibration under dataset shift
+ - CDDM uses fixed window (Uses the same default window size as FHDDM and MDDM of 100.)
+
+BDD
+ - Change mentions of regularly spaced and irregularly spaced data streams to even and uneven
+
+CONCLUSION
+ - Make sure contributions match results
+
+MISC
+ - Glossary
+
+STYLE
+ - "data stream" rather than "datastream"
+ - "coronavirus" rather than "corona virus"
+
+22 items, 3 per day next week

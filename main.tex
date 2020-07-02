@@ -1,0 +1,104 @@
+\documentclass[12pt,examcopy]{uathesis}
+\usepackage{graphicx}
+\usepackage{algorithm}
+% \usepackage{subcaption}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{pgfplots}
+% \usepackage{algorithmic}
+\usepackage{algpseudocode}
+\usepackage{amssymb}
+\usepackage{moreverb}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{dsfont}
+\usepackage{adjustbox}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows}
+\usepackage{csquotes}
+\usepackage{url}
+\usepackage{rotating}
+% \usepackage{subcaption}
+
+
+\newtheorem{definition}{Definition}
+
+% some settings to fill pages more densely
+\renewcommand\floatpagefraction{.9}
+\renewcommand\topfraction{.9}
+\renewcommand\bottomfraction{.9}
+\renewcommand\textfraction{.1}
+\setcounter{totalnumber}{50}
+\setcounter{topnumber}{50}
+\setcounter{bottomnumber}{50}
+
+% \pgfplotsset{compat=1.15}
+
+\begin{document}
+\title{Concept Drift in Medical Referrals Triage}
+\author{Hamish Huggard}
+\department{Computer Science}
+\supervisor{Yun Sing Koh}{Gillian Dobbie}
+\maketitle
+
+\frontmatter
+\begin{abstract}
+When patients are referred to a medical clinic, they are triaged on the basis of their accompanying {\it medical referral documents}. This is a natural domain to train a model on historic triage decisions to predict triage priorities based on referral documents. Such a model, when incorporated in a decision support system can help clinicians triage efficiently and systematically.
+
+In the clinical domain, circumstances can change frequently and dramatically. The evolving demographic and epidemiology of the population, as well as the changing face of medical knowledge and clinical resources, mean that the procedure for clinical triage decisions is prone to change over time. That is, medical triaging is prone to {\it concept drift}, or an unstable learning environment. In order for a decision support system to remain useful, it must be able to detect when concept drift has occurred, so that the model can be retrained on more recent data and brought up to date.
+
+This thesis is concerned with the problem of detecting concept drift in the medical triage domain, with the aim of incorporating the work into a triage support system. We argue the existing approaches to concept drift detection are not well suited for this application area. All or many of the following issues tend to obtain 1) they fail to differentiate between real and feature drift, which can lead to unnecessary retraining and harm model performance, 2) they lack interpretability, 3) they are unable to detect drift until correct labels have been supplied, which may result in an unacceptable delay, 4) they are designed for balanced binary features, rather than multiple unbalanced triage labels.
+
+We present a concept drift detection system tailored for the requirements of medical triage. We describe and implement an architecture for monitoring the streams of referral documents, model triage predictions, and clinician triage decisions, and indicating when any of feature drift, label drift, or real drift has occurred. We also implement a graphical dashboard which visualises the evolution of the data stream and the state of the drift detection system. 
+
+Existing drift detection methods have not adequately differentiated between real and feature drift. If feature drift is detected, then the model may be retrained unnecessarily, thereby wasting resources and degrading model performance. In addition, monitoring for feature and real drift together obfuscates how the data stream is actually evolving. We introduce the Calibrated Drift Detection Method (CDDM) which evaluates whether a model has become over-confident in its predictions. This allows it to detect real drift and {\it not} feature drift. 
+
+We introduce a Beta With Adaptive Forgetting (BWAF), a drift detection method which has several advantages over its competitors. It does not require parameter tuning, which will be difficult for medical contexts where we can say little in advance about how the data stream will evolve. It is readily interpretable, and can visually display the current and original state of the stream. It can be deployed as a one or two tailed test. And it can run in real, rather than index time. These advantages make it more appropriate for the medical triage context.
+
+We experimentally validate our system. We investigate how well CDDM can differentiate between real and virtual drift using a Bernoulli data stream. We compare CDDM and BWAF with state of the art drift detectors on a battery of benchmark datasets. Finally, we introduce a datastream which simulates medical referrals triage, and evaluate how well our proposed system works on this dataset. 
+
+\end{abstract}
+
+\begin{acknowledgements}
+I would like to acknowledge and thank: 
+\begin{itemize}
+    \item {\bf The Precision Driven Health Partnership} for funding this work. Special thanks are due to {\bf Kelly Atkinson} for being my point of contact and support.
+    \item {\bf Edmond Zhang} for introducing me to this project and mentoring me in the field of medical data science. 
+    \item {\bf Yun Sing Koh} and {\bf Gillian Dobbie} for being generally swell thesis advisors, as well as encouraging me to submit a paper to SIGIR, and putting just enough pressure on me so that I actually got work done without being overwhelmed by guilt and anxiety. 
+    \item {\bf My past self}, for not procrastinating too much. Although he didn't remotely pull his weight, he did at least get the ball rolling, and he did do some good work on side-projects.
+    \item {\bf An unknown Mesopotamian clerk}, without whose invention of writing this thesis would not be possible.
+    \item {\bf My parents}, without whom I would not be possible.
+    \item {\bf Christelle Quilang} for giving me a backrub one time when I was writing code.
+    % \item {\bf My cat} for her lukewarm interest in my existence.
+    \item {\bf COVID-19} for adding some variety to the months leading up to my thesis deadline.
+    \item And finally, any editors, proof-readers, markers, or gate keepers who can appreciate a joke.
+\end{itemize}
+\end{acknowledgements}
+
+\chapter*{List of Publications}
+
+Parts of Chapter \ref{chapt:CDDM} have been published in:
+\begin{itemize}
+    \item Hamish Huggard, Yun Sing Koh, Gillian Dobbie, and Edmond Zhang. Detecting Concept Drift in Medical Triage. In Proceedings of Special Interest Groups of Information Retrieval (SIGIR), 2020.
+\end{itemize}
+
+\setcounter{tocdepth}{1}
+\tableofcontents
+
+\listoffigures
+
+\listoftables
+
+\mainmatter
+\input{Chapters/01_Introduction.tex}
+\input{Chapters/02_Background.tex}
+\input{Chapters/03_TriageDD}
+\input{Chapters/04_CDDM}
+\input{Chapters/05_BWAF}
+\input{Chapters/06_experiments}
+\input{Chapters/07_Conclusion.tex}
+
+\backmatter
+\bibliographystyle{plain}
+\bibliography{bibliography}
+
+\end{document}
