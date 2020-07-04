@@ -75,10 +75,7 @@ Thus, in domains with non-homogeneous risk, and where feature drift may occur, w
 
 \section{Algorithm} \label{CDDM:algorithm}
 
-Recall from the introduction that $q$ is the probability of a label given the instance, $\qhat$ is is the probability of a label given the instance, $\qhat
-\begin{align}
-    \qhat
-\end{align}
+Recall from the introduction that $q$ is the probability of a label given the instance, $\hat{q}$ is is the probability of a label given the instance, $\hat{q}$
 
 CDDM approaches the problem of detecting increases in reducible error rather than overall error by estimating irreducible changes in the error rate, and subtracting this from the overall error rate:
 \begin{equation}
@@ -109,7 +106,7 @@ Achieiving the dired result.
 
 Intuitively, CDDM ``places bets" on how likely each predicted label is to be correct. If a prediction is estimated to have probability $p$ of being correct, then CDDM buys a bet for \$$p$. If the prediction turns out to be correct, CDDM receives a payoff of \$1. If the prediction turns out to be incorrect, CDDM receive a payoff of \$0. If CDDM loses a ``significant" amount of money, then it signals that concept drift has been detected.
 
-Concretely, CDDM obtains residual estimations via calibrated probabilitistic predictions. A predictor is {\bf calibrated} if it can assign probabilities to events which match the rates at which these events actually occur \cite{superforecasting}\cite{scoring_rules}\cite{calibrating}. For example, if a calibrated predictor assigns a probability of 90\% to ten events, then in expectation nine of those events should in fact obtain. 
+Concretely, CDDM obtains residual estimations via calibrated probabilistic predictions. A predictor is {\bf calibrated} if it can assign probabilities to events which match the rates at which these events actually occur \cite{superforecasting}\cite{scoring_rules}\cite{calibrating}. For example, if a calibrated predictor assigns a probability of 90\% to ten events, then in expectation nine of those events should in fact obtain. 
 
 Recall that we are denoting $q$ as the probability of a label obtaining a particular value, and $\qhatyhat$ a model's estimation of this value. Thus in our notation, a model is calibrated if $q=\hat{q}$. For the present, we will assume the label $y$ is binary, and so $q=\Pr(y=1)$. A plot of $q$ against $\hat{q}$ is known as a reliability diagram \cite{calibrating}. Figure \ref{fig:calibration} provides an illustration of the reliability diagram for a calibrated predictor.
 
@@ -138,8 +135,7 @@ Recall that we are denoting $q$ as the probability of a label obtaining a partic
 How are $\hat{q}$ values to be practically obtained? It is not possible to obtain $\hat{q}$ values for all machine learning techniques. Specifically, this cannot be done for any model which makes only point predictions, and not probabilistic probabilistic predictions. Decision trees are therefore excluded from this discussion. But most popular machine learning techniques produce outputs which can be interpreted as $\hat{q}$ values. For a neural network classifier, the activations of softmax or sigmoid units can be used as $\hat{q}$ values. For ensemble classifiers, the proportions of votes cast for a given label can be interpreted as $\hat{q}$. For a Bayesian model, the posterior probability is naturally interpreted as $\hat{q}$.
 
 Assume we are dealing with a binary label. Let $\id{y=\hat{y}}=\id{y=0}$, $\qyhat=\Pr(y=0)$, and similarly for $\y{1}$, $\yhat{1}$, $\qhat{1}$, and so on (see Introduction for a full explication of notation). Additionally, let
-\newcommand{\qyhat}{\q{\hat{y}}}
-\newcommand{\qhatyhat}{\qhat{\hat{y}}}
+
 \begin{align}
     \qyhat &= \Pr(y=\hat{y}) \\
     \qhatyhat &= \max(\qhat{0},\qhat{1})

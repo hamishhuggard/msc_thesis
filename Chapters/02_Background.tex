@@ -19,6 +19,8 @@ In this section we outline the setting of this thesis. In Section \ref{setting:m
 \newcommand{\id}[1]{\mathds{1}[#1]} % identity function
 \newcommand{\x}[1]{x^{(#1)}}
 \newcommand{\X}[1]{X^{(#1)}}
+\newcommand{\qyhat}{\q{\hat{y}}}
+\newcommand{\qhatyhat}{\qhat{\hat{y}}}
 
 A {\bf label} is a random variable to be predicted by the machine learning model, denoted $y\in dom(y)$. In general, a label may be (non-exhaustively) binary, numeric, or categorical. However, in this thesis we will only be concerned with binary and categorical labels.\footnote{An astute reader will note that we equivocate between $y$ being a random variable and $y$ being a specific value {\it of} that variable, and similarly with $x,q,z$, etc. This is to simplify notation.}  
 
@@ -207,31 +209,31 @@ This equation can easily be adapted to detect significant deviations in both the
 
 Work on concept drift often describes ad-hoc adaptations of CUSUM to the problem of concept drift detection \cite{barros_comparison}\cite{gama_survey}. These works cite the original paper by Page \cite{CUSUM}, making the author of these variations unclear. I have elected to describe the original form of the algorithm as it is more elegant and theoretically justified than its variations.
 
-The study of concept drift {\it per se} appears to originate with the STAGGER algorithm \cite{STAGGER}. In it's early form, this study was concerned with how ``concepts" - that is, conjunctions of boolean variables such as {\tt bachelor = unmarried AND man} - were ``drifting" over time.  With the introduction of the STAGGER algorithm also came the STAGGER dataset, a synthetic dataset in which instances were classed as positive if they satisfied a certain conjunctive expression. 
+The study of concept drift {\it per se} appears to originate with the STAGGER algorithm \cite{STAGGER}. This work was heavily influenced by cognitive psychology, so the original usage of ``concepts drift" denoted changes in conjunctive definitions of words. For example, a concept drift could be {\tt bachelor = unmarried AND man} changing to {\tt bachelor = unmarried AND woman}. This work also introduced the STAGGER dataset, which has become a standard benchmark in the field. 
 
-The FLORA family of algorithms expanded the study of symbolic concept drift to include recurring concepts and the maintaining of a sliding windows of recent examples \cite{FLORA}. 
+The FLORA family of algorithms  \cite{FLORA} expanded the study of symbolic concept drift, and introduced many ideas to the field including recurring concepts, sliding windows of recent examples, and dynamic changes to the window size depending on the stability of the concepts. 
 
-Klinkenberg and Joachim subsequently expanded the study of concept drift to real-valued domains \cite{SVM_detection}. Their approach was to train an SVM online, using a sliding window whose size is chosen to minimise generalisation error, which is estimated with the $\zeta\alpha$ estimator. Although this approach was efficient and theoretically well motivated, it was tied specifically to SVMs, and so was not a general solution to the problem of concept drift detection.
+Klinkenberg and Joachim subsequently expanded the study of concept drift to real-valued domains \cite{SVM_detection}. Their approach was to train an SVM online, using a sliding window whose size is chosen to minimise generalisation error, which is estimated with the $\zeta\alpha$ metric. Although this approach was efficient and theoretically well motivated, it was tied specifically to SVMs, and so was not a general solution to the problem of concept drift detection.
 
 \subsection{Drift Detection Method}
 
-Drift detection method (DDM) monitors the error rate of the model. If the error rate changes significantly then this is regarded as an indication of drift having occurred. Classification accuracy is regarded as binary, so the string of correct/incorrect labels by the base learner can be regarded as a sequence of binary independent trials. The error rate is therefore expected to follow a binomial distribution. When the error rate reaches its lowest point $p_{min}$, and its lowest standard deviation $s_{min}$, which is given by $s_i = \sqrt{p(1-p)/i}$. When the error rate is detected to be three standard deviations from the earlier estimate, drift is considered to have occurred and the base model is retrained.
+Drift detection method (DDM) monitors the error rate of the model. If the error rate changes significantly then this is regarded as an indication of concept drift having occurred. Classification accuracy is regarded as binary, so the string of correct/incorrect labels by the base learner can be regarded as a sequence of binary independent trials. The error rate is therefore expected to follow a binomial distribution. When the error rate reaches its lowest point $p_{min}$, and its lowest standard deviation $s_{min}$, which is given by $s_i = \sqrt{p(1-p)/i}$. When the error rate is detected to be three standard deviations from the earlier estimate, drift is considered to have occurred and the base model is retrained.
 
-Drift Detection Method (DDM) introduced several ideas which would later become staples of concept drift research. They made the following observations:
+Drift Detection Method (DDM) introduced several ideas which would later become staples of concept drift research. They made the following observations: 
 \begin{itemize}
     \item By monitoring the residual of the predictions - i.e., the difference between the prediction and true label - rather than something internal to the model, we can treat concept-drift detection as model-agnostic. Specifically, DDM treats the residual as a Bernoulli variable, which takes the value 1 for an incorrect prediction and 0 for a correct prediction.
     \item Under normal conditions of no concept drift, we would normally expect the mean residual to either hold steady or decrease over time. Thus if the mean residual increases, this is indicative of concept drift. Specifically, the authors justified this claim in terms of PAC learning theory. We should therefore keep track of the minimum mean residual so far observed.
-    \item We can estimate how unlikely the current observations are under the null hypothesis that no concept drift has occurred. Once the probability of the current observation falls below a certain threshold $W$, a warning is sounded that drift may be occuring and instances start to be recorded in a buffer. When the probability falls below a lower threshold $D$, then drift is regarded to have occurred and the model is retrained on the instances stored in the buffer. If the probability of the current observations returns to a level above the warning threshold, then the buffer is emptied.
+    \item We can estimate how unlikely the current observations are under the null hypothesis that no concept drift has occurred. Once the probability of the current observation falls below a certain threshold $W$, a warning is sounded that drift may be occurring and instances start to be recorded in a buffer. When the probability falls below a lower threshold $D$, then drift is regarded to have occurred and the model is retrained on the instances stored in the buffer. If the probability of the current observations returns to a level above the warning threshold, then the buffer is emptied.
 \end{itemize}
-In DDM, the variable denoting whether or not the classification was correct is a Bernoulli variable, whose probability $p$ of a successful trial (i.e., incorrect classification) can be estimated at time $t$ as $\hat{p}_i$ as the proportion of unsuccessful predicitons so far observed. The standard error around the measurement $\hat{p}_i$ is given by $s_i = \sqrt{p_i(1-P_i)/i}$, and when $p_i+s_i$ reaches its minimum, this will be our lowest probability within a 1-SE confidence interval.
+In DDM, the variable denoting whether or not the classification was correct is a Bernoulli variable, whose probability $p$ of a successful trial (i.e., incorrect classification) can be estimated at time $t$ as $\hat{p}_i$ as the proportion of unsuccessful predictions so far observed. The standard error around the measurement $\hat{p}_i$ is given by $s_i = \sqrt{p_i(1-p_i)/i}$, and when $p_i+s_i$ reaches its minimum, this will be our lowest probability within a 1-SE confidence interval.
 
-This algorithm is poorly justified. The posterior probability of the rate can be exactly expressed as a beta distribution, so there is no strict need to approximate it with a normal distribution. This approximation will perform poorly when $q$ is close to 0 or 1, and when few data points are available. Furthermore, detecting when the current one-sigma upper bound on the rate exceeds the historically lowest value of the two- or three-sigma upper bound is frankly a silly proxy for detecting when the current rate is larger than its lowest value. One can only obtain a p-value by comparing an upper bound with a lower bound.
+This algorithm is poorly justified. The posterior probability of the rate can be exactly expressed as a beta distribution, so there is no strict need to approximate it with a normal distribution. This approximation will perform poorly when $p$ is close to 0 or 1, and when few data points are available. Furthermore, detecting when the current one-sigma upper bound on the rate exceeds the historically lowest value of the two- or three-sigma upper bound is frankly a silly proxy for detecting when the current rate is larger than its lowest value. One can only obtain a p-value by comparing an upper bound with a lower bound.
 
 However, the more lasting contribution from this paper was to establish a template for drift detectors, with a warning and drift threshold. When the warning threshold is exceeded, all new instances are placed in a buffer. When the drift threshold is exceeded, signal that drift has occurred and train a new model on the contents of the buffer.
 
 RDDM is a variant of DDM with periodic resets to become more reactive to changes in the error-rate. EDDM is another variant, which monitors for changes in the distribution of {\it gaps} between errors, rather than changes in the error rate itself \cite{EDDM}.
 
-\subsection{Sliding Window Approaches}
+\subsection{Sliding Window Methods}
 
 STEPD essentially approaches concept drift detection by testing the hypothesis ``the error-rate changed $n$ time steps ago for some fixed, and pre-set $n$" at each time step \cite{STEPD}. This is achieved by partitioning the data stream history into 1) a sliding window of the most recent $n$ values, and 2) the preceding values. The statistical test of equal proportions is then used to test whether the rates of the two partitions are significantly different.
 
@@ -243,16 +245,17 @@ PL (paired learners) is another sliding window method \cite{PL}. However, rather
 
 FHDDM may be considered a hybrid of DDM and sliding window methods \cite{FHDDM}. At each time step the error rate in the sliding window is estimated. If this error rate significantly exceeds its lowest value, then drift is indicated.
 
-\subsection{ADWIN}
+SEQDRIFT2 \cite{SEQDRIFT} uses the Bernstein bound to compare a window of the most recent instances with a reservoire of the preceding instances.
+
+\subsection{Multiple Drift Point Testing}
 
 A major flaw of the sliding window approaches is that they are brittle with respect to the window size parameter. If the window size is too large then there will be a large delay in the drift detection. If the window is too small then the detector will not be able to detect small drifts over random noise. ADWIN combats this problem by dynamically increasing or decreasing the window size \cite{ADWIN}. The authors explain:
 \begin{displayquote}
-The idea is simple: whenever two ``large enough" subwindows of $W$ exhibit ``distinct enough" averages, one can conclude that the corresponding expected values are different, and the older portion of the window is dropped. In other words, $W$ is kept as long as possible while the null hypothesis ``$\mu_t$ has remained constant in $W$" is sustainable up to confidence $\delta$.
+    The idea is simple: whenever two ``large enough" subwindows of $W$ exhibit ``distinct enough" averages, one can conclude that the corresponding expected values are different, and the older portion of the window is dropped. In other words, $W$ is kept as long as possible while the null hypothesis ``$\mu_t$ has remained constant in $W$" is sustainable up to confidence $\delta$.
 \end{displayquote}
 This involves testing for drift at each time step in the window, which requires a multiple comparisons correction. One of the main advantages of ADWIN is that it provided theoretical guarantees on its false positive and negative rates.
 
-SEQDRIFT \cite{SEQDRIFT} and SEED \cite{SEED} are similar to ADWIN, but they use a different kind of memory management.% I guess. 
-SEQDRIFT uses a ``reservoir" and SEED uses ``blocks". %TBH, I don't understand the motivation nor the details of these algorithms.
+SEED \cite{SEED} is another drift detection method which considers multiple drift points. Unlike ADWIN, the data are processed in batches or ``blocks", so most possible drift points are automatically excluded. When contiguous blocks are evaluated via the Hoeffding inequality to have the same rate, then the two are merged, thus eliminating one potential drift point.
 
 \subsection{EWMA}
 
@@ -268,27 +271,17 @@ The authors cast the drift detection problem as follows. There are $n$ examples 
 
 This is incorporated into an online drift detection algorithm as follows. At time $t$, the hypothesised drift point is set to $d=t$, and is fixed at this value until enough instances are accumulated to the right of the drift point that either $P(\hat{\mu}_X+\epsilon < \hat{\mu}_Y|\mu_X \ge \mu_Y)$ is statistically insignificant, in which case a drift is signalled, or $P(\mu_X+\epsilon < \mu_Y)$ is statistically insignificant, in which case $d$ is set to the current time step. A major advantage of HDDM is that the derived bounds do not assume that the data stream to be monitored is Bernoulli, so can be used to detect drift on real-valued loss streams.
 
-
-By constrast, LFR monitors the true negative rate and true positive rate, that is, $P(\hat{y}=i|y=i)$ for $i=0$ and $i=1$ respectively, as well as negative predicted value and positive predicted value, $P(y=i|\hat{y}=i)$ for $i=0$ and $i=1$ respectively. 
-
-% https://www.desmos.com/calculator/mpft6rnqta
-
-
-% \section{GP Referrals Triage} \label{Background:Medical}
-
-% Etc.
-
 \subsection{Region Drift}
 
-degree of drift DoF
-"The proposed method, which can detect different types of drift, is based on processing data chunk by chunk and measuring differences between two consecutive batches, as drift indicator. Differences are calculated by finding nearest neighbour in previous batch of data for each instance in current batch and comparing their corresponding labels.""
-The Degree of Drift (dof) processes the data in batches and finds the nearest neighbour of each instance in the current batch in the previous batch. A metric called degree of drift is computed based on this comparison and the differences of labels between nearest neighbour pairs. If the degree of drift changes significantly in one batch, then drift has occurred.
+Most of the drift detectors discussed so far have supposed that when concept drift occurs, all the data before the drift becomes irrelevant. Liu et al. \cite{LLD} introduced the notion of {\bf region drift}, in which concept drift only affects a "region" of instance space. Thus all the data outside of this region from before the drift can be reused when retraining the model. The authors present a new drift detector, local drift degree (LLD), which processes data in batches and uses the nearest neighbour methods to determine if drift has occurred in each region since the previous batch.
 
-LDD
+\subsection{Degree of Drift}
+
+Degree of drift (DoF) \cite{DoF} considers data in batches. If the current batches has a heterogeneous Euclidean/overlap metric (HEOM) with the last metric, which is $s$ standard deviations above the mean of past batches, then drift is signalled.
 
 \subsection{Unbalanced Classes}
 
-ELM
+ELM 
 
 From \cite{DDM_OCI}
 \begin{quote}
@@ -296,26 +289,26 @@ From \cite{DDM_OCI}
 \end{quote}
 
 
-STAGGER was largely focused on a cognitive psychology, rather than practical machine learning perspective.
 
-FLORA used a sliding window. FLORA2 increased or decreased the window size depending on the stability of the data stream. FLORA3 retained previous concepts in memory, and so as to detect recurring concepts.
+MDDM \cite{MDDM} looks uses both a sliding window {\it and} geometric or linear weighting, and uses the McDiarmid bound. It detects increases in the weighted error rate in the window.
 
-MDDM looks uses both a sliding window {\it and} geometric or linear weighting, and uses the McDiarmid bound. It detects increases in the weighted error rate in the window.
+PerfSim \cite{perfsim} considers all the components of the confusion matrix, and uses the cosine similarity test to detect changes. Drift point candidates are given by assuming the data arrives in batches. CSDD \cite{CSDD} uses the same drift test but uses two fixed-size sliding windows for recent and old data.
 
-PerfSim considers all the components of the confusion matrix, and uses the cosine similarity test to detect changes. Drift point candidates are given by assuming the data arrives in batches. CSDD uses the same drift test but uses two fixed-size sliding windows for recent and old data.
+\subsection{Bayesian Concept Drift Detection}
 
-The main contribution of CDDM was to take what is in reality a very difficult problem, distill it down to a simple and intuitive formulation, and then offered a terrible solution to the problem as formulated. This naturally stimulated a great deal of follow up work, as other authors could quickly develop an intuition for the problem domain and previous solutions, and come up with improvements on previous these solutions. Plus, there was strong motivation for the problem, and yet a precedent has been set for ignoring the real-world complications which make the problem hard. Scholars interested in starting a new field to accrue massive  ``pioneering work" citations should take note.
+Many researchers have proposed Bayesian approaches to change point detection, a problem closely related to concept drift detection. Barry and Hartigan \cite{barry_hartigan} derived an $O(n^3)$ algorithm for detecting {\it multiple} change points within a time series. Fearnhead \cite{fearnhead} developed an $O(n^2)$ algorithm to achieve the same task. 
 
-This problem formulation is well suited to academic research, as it admits of straightforward notation, experimentation,
-However, the formulation often does not fit practical data science applications well.
+Adams and MacKay \cite{adams_mackay} adopted a Bayesian approach to change point detection for online contexts. This approach considers a hypothesis space of $l=1, l=2, \dots$, where $l=i$ indicates that a drift point occurred $i$ time steps in the past. At each new time step, the posterior $\Pr(l=i)$ for each $i$ is recalculated.
 
-Another branch of concept drift detection research applies Bayesian modelling to the data stream.
-
-From DDM: Other relevant works are the works of R.Klinkenberg and C.Lanquillon, both of them in information filtering. For instance, Klinkenberg and Renz in [4], in order to detect concept drift, propose monitoring the values of three performance indicators: accuracy, recall and precision over time, and then, comparing it to a confidence interval of standard sample errors for a moving average value (using the last M batches) of each particular indicator.
+Bach and Maloof \cite{BCMC} adopted the Adams-MacKay approach to concept drift adaptation. They proposed the Bayesian conditional model comparison (BCMC) algorithm, which makes predictions according to an ensemble of Bayesian learners, one for each value of $l=i$. The models are weighted according to the $\Pr(l=i)$ posteriors. The authors also propose a more efficient algorithm which approximates BCMC, called the pruned Bayesian conditional model comparison (PBCMC).
 
 \subsection{Summary}
 
-With some simplification, we can understand drift detectors as consisting of three components. A drift detection method consists of three components. First there is the method of generating 
+With some abstraction, we can classify concept drift detectors according to how they implement three components.  e can understand drift detectors as consisting of three components. A drift detection method consists of three components. First there is the method of generating 
+
+
+By contrast, LFR monitors the true negative rate and true positive rate, that is, $P(\hat{y}=i|y=i)$ for $i=0$ and $i=1$ respectively, as well as negative predicted value and positive predicted value, $P(y=i|\hat{y}=i)$ for $i=0$ and $i=1$ respectively. 
+
 
 \begin{table}[]
     \centering

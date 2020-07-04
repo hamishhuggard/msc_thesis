@@ -11,7 +11,7 @@ INTRODUCTION
 
 BACKGROUND
  - Write conclusion
- - Table of other drift detectors 
+ - Table of other drift detectors
  - Describe more drift detectors
  - Theoretical results
  - Bayesian detectors
@@ -28,7 +28,7 @@ CDDM
  - CDDM uses fixed window (Uses the same default window size as FHDDM and MDDM of 100.)
 
 BDD
- - Change mentions of regularly spaced and irregularly spaced data streams to even and uneven
+ - get rid of windowed BDDM?
 
 CONCLUSION
  - Make sure contributions match results
@@ -39,5 +39,7 @@ MISC
 STYLE
  - "data stream" rather than "datastream"
  - "coronavirus" rather than "corona virus"
+ - "un/even time series" rather than "sporadic/regularly spaced domains"
+ - names of detectors should be lowercase
 
 22 items, 3 per day next week

@@ -171,24 +171,32 @@ In this chapter we consider methods for deriving a posterior probability distrib
 
 \section{Bayesian Drift Detection Method} \label{BDD:bddm}
 
-In this section we introduce the Bayesian drift detection method (BDDM). This method calculates the exact posterior of drift having occurred. It is therefore more precise than other drift detectors, but at the cost of having $O(t^2)$ time complexity and $O(t)$ space complexity. We also present a windowed version which is linear in time and constant in space.
+In this section we introduce the Bayesian drift detection method (BDDM). BDDM precisely computes posterior distributions over drift points, as well as the error rates at the start and end of the data stream. It is therefore more precise than other drift detectors, but at the cost of having $O(t^2)$ time complexity and $O(t)$ space complexity. We also present a windowed version which is linear in time and constant in space.
 
 \subsection{Setting}
 
-We wish to find the posterior probability that concept drift has occurred at some point given an observed sequence of data stream values.
+We pose the problem of computing a posterior over drift points as follows. Given a Bernoulli time series 
+\begin{equation}
+    Z=z_0,z_1,\dots,z_t
+\end{equation}
+we would like to compute the probabilities that the rate of the series changed at each time step, as well as the probability no change occurred. The time series in question is the series of residuals of the model. A change in the rate of this series indicates that the error rate has changed which indicates drift.
+
+We denote the probability that a drift occurred at time step $i$ as $\Pr(d=i)$. Specifically, $\Pr(d=i)$ is the prior probability of drift having occurred at time step $i$. The posterior probability is the probability of drift conditioned on the observed time series, denoted $\Pr(d=i|Z)$. For convenience, we denote the probability that no drift has occurred as $\Pr(d=0)$.
+
+
+We can express the posterior probability of drift at a given time step using Bayes' rule:
 \begin{align}
   \Pr(d=i|Z) &= \frac{\Pr(Z|d=i)}{\Pr(Z)}\Pr(d=i) \\
   &= \frac{\Pr(Z|d=i)}{\sum_{j=0}^t\Pr(Z|d=j)\Pr(d=j)}\Pr(d=i) \label{eq:posterior}
 \end{align}
-where $Z=z_0,z_1,\dots,z_t$, and $d=i$ means that the drift occurred between instance $i-1$ and instance $i$. That is, instances from $i$ onwards are drawn from the drifted distribution. We denote no drift as $d=0$. For convenience, we will denote the joint probability of a given sequence with a given drift point as
+For convenience, we will denote the joint probability of a given sequence with a given drift point as
 \begin{align}
   P_i &= \Pr(Z, d=i) \\
   &= \Pr(Z|d=i)\Pr(d=i).
 \end{align}
 The posterior probability that drift has occurred is given by
 \begin{align}
-  \Pr(\neg drift|Z) &= \Pr(d=0|Z) \\
-  &= \frac{\sum_{i=1}^t P_i}{\sum_{i=0}^t P_i}.
+  \Pr(d=0|Z) = \frac{\sum_{i=1}^t P_i}{\sum_{i=0}^t P_i}.
 \end{align}
 
 \subsection{Priors}
@@ -197,9 +205,9 @@ We require a method for setting unitary priors on possible drift points.
 \begin{equation}
   \sum_{i=0}^t \Pr(d=i) = 1
 \end{equation}
-We propose two systems of priors for BDDM, one for regular interval settings and one for sporadic interval settings. In periodic interval settings, data stream values become available on a periodic basis, and successive values are equidistant in time. For example, hourly measurements of air quality. In sporadic interval settings, data stream values are spaced irregularly in time. Successive values may have arbitrary gaps in time between them. Our motivating example of GP referrals triage is an example of a sporadic interval setting.
+We propose two systems of priors for BDDM, one for evenly spaced time series and one for unevenly spaced time series. Our motivating example of GP referrals triage is an example of an unevenly spaced time series as GP referral documents or clinician labels can arrive at any time.
 
-A natural prior for regular interval settings is a geometric distribution \cite{fearnhead}\cite{BCMC}. We suppose that there is a constant rate of concept drift, and that drift may only occur once. This is like flipping a coin at every time step, and allowing drift to occur upon the first heads.
+A natural prior for evenly spaced time series is a geometric distribution \cite{fearnhead}\cite{BCMC}. We suppose that there is a constant rate of concept drift, and that drift may only occur once. This is like flipping a coin at every time step, and allowing drift to occur upon the first heads.
 \begin{equation}
   \Pr(d=i) = \begin{cases}
   (1-\lambda)^t & \text{if }i=0 \\
@@ -310,7 +318,7 @@ By combining the priors from Equation \ref{eq:prior} and likelihoods from Equati
 
 BDDM is closely related, but distinct, from other Bayesian approaches to concept drift detection and change point detection. The only other Bayesian method which is intended to be directly applied to machine learning on volatile data streams is BCMC \cite{BCMC}. However, this algorithm requires maintaining an ensemble of one model per potential drift point. It is therefore too computationally expensive for many applications. The work of Adams and MacKay \cite{adams_mackay}, Barry and Hartigan \cite{barry_hartigan}, and Fearnhead \cite{fearnhead} are concerned with the more general problem of Bayesian multiple change-point detection in data streams, and so cannot be directly applied to our problem.
 
-Modelling drift in a Bayesian manner has many advantages compared to other drift detection methods. By encoding information about time intervals in our priors, we can apply drift detection to both sporadic interval domains {\it and} regular interval domains. We are not aware of any other drift detectors which accomodate sporadic intervals. Why is this important? Suppose we receive one hundred instance within an hour, then no instances for a year, then another hundred instances in an hour. If we detect drift between the first and last instance, then it is overwhelmingly likely that the drift point occurred in the year-long fallow period. If a drift detector does not account for sporadicity, then this information will be lost.
+Modelling drift in a Bayesian manner has many advantages compared to other drift detection methods. By encoding information about time intervals in our priors, we can apply drift detection to both unevenly spaced time series {\it and} evenly spaced time series. We are not aware of any other drift detectors which accommodate unevenly spaced time series. Why is this important? Suppose we receive one hundred instance within an hour, then no instances for a year, then another hundred instances in an hour. If we detect drift between the first and last instance, then it is overwhelmingly likely that the drift point occurred in the year-long fallow period. If a drift detector does not account for unevenly spaced time series, then this information will be lost.
 
 Another advantage of this Bayesian approach is that it does not require parameter tuning. The only parameter is the rate of drift used to calculate priors. This has an intuitive meaning, and its approximate magnitude can be guessed for the target domain. This is particularly important in concept drift detection, as we often do not have annotated historical data for parameter tuning. There are few other drift detectors which have such simple parameters \cite{DDM}\cite{CUSUM}. Other drift detectors require tuning thresholds \cite{ADWIN}\cite{HDDM}, window sizes \cite{STEPD}\cite{PL}, or decay rates \cite{HDDM}\cite{EWMA}, which do not have intuitive meanings. The windowed version of BDDM is not a parameter {\it per se}, and should simply be set according to the computational resources available.
 
@@ -474,9 +482,9 @@ The pseudocode for the full BWAF procedure is given in Algorithm \ref{alg:bwaf}
 
 BWAF retains several of the advantages of BDDM. It retains the ability to view the posterior distribution over the current and initial rates of the data stream. It does not retain the ability to plot a pmf or cmf of drift occurring, although one can create a diagram analagous to a cmf by plotting the drift probability over time. BWAF is therefore not as interpretable than BDDM, but is still more interetable than most drift detectors. 
 
-As with BDDM, BWAF can accomodate sporadic intervals. The choice of units for these intervals will affect the performance of BWAF, and choosing appropriate units is not straightforward. One might adopt the heuristic that the units should be such that the mean interval is one, so that BWAF will behaviour similarly with sporadic intervals and regular intervals. 
+As with BDDM, BWAF can accomodate unevenly spaced time series. The choice of units for these intervals will affect the performance of BWAF, and choosing appropriate units is not straightforward. One might adopt the heuristic that the units should be such that the mean interval is one, so that BWAF will behaviour similarly with unevenly spaced time series and evenly spaced time series. 
 
-A major advantage of BWAF is that it does not have any parameters. By dynamically adjusting the forgetting parameter it can in principle detect drifts of any magnitude of any level of abruptness. It is not clear if the same is true of any other drift detectors. DDM has no parameters, but cannot detect drifts which are small compared to sigma \cite{DDM}. In this respect, BWAF is superior even to BDDM. As aforementioned, in the case of sporadic intervals there is an implicit parameter in the choice of interval units. However, given that other drift detectors do not even accomodate sporadic intervals, the point still goes to BWAF. 
+A major advantage of BWAF is that it does not have any parameters. By dynamically adjusting the forgetting parameter it can in principle detect drifts of any magnitude of any level of abruptness. It is not clear if the same is true of any other drift detectors. DDM has no parameters, but cannot detect drifts which are small compared to sigma \cite{DDM}. In this respect, BWAF is superior even to BDDM. As aforementioned, in the case of unevenly spaced time series there is an implicit parameter in the choice of interval units. However, given that other drift detectors do not even accommodate unevenly spaced time series, the point still goes to BWAF. 
 
 Further advantages of BWAF are that it is relatively simple and easy to understand, it can be easily adapted to detect drift in both directions, and that it is extremely memory efficient, only requiring four registers. 
 
@@ -512,6 +520,6 @@ It is interesting to note that BWAF has parallels with many disparate approaches
 
 \section{Conclusion} \label{BDD:conclusion}
 
-In this chapter we have introduced BDDM, a drift detector which computes exact posterior probabilities of drift. We have also introduced BWAF, a heuristic drift detection method inspired by BDDM. These detectors offer many advantages compared to other drift detectors. They accomodate sporadic intervals as well as regular intervals. They simplify the task of parameter tuning. They are also more transparent than other drift detectors. These detectors help bridge the gap between concept drift detection research and practical data science by providing solutions to some of the problems which come up in real applications which other drift detection methods are unprepared to deal with.
+In this chapter we have introduced BDDM, a drift detector which computes exact posterior probabilities of drift. We have also introduced BWAF, a heuristic drift detection method inspired by BDDM. These detectors offer many advantages compared to other drift detectors. They accomodate unevenly spaced time series as well as evenly spaced time series. They simplify the task of parameter tuning. They are also more transparent than other drift detectors. These detectors help bridge the gap between concept drift detection research and practical data science by providing solutions to some of the problems which come up in real applications which other drift detection methods are unprepared to deal with.
 
 For future research, it would be useful to explore other methods for bounding the space and time complexity of BDDM. The fixed window approach is somewhat ad-hoc. Other Bayesian change point detection algorithms have made use of Monte Carlo simulation \cite{BCMC}. Further, it would be useful to theoretically explore BWAF. Can performance guarantees be obtained for BWAF? Are there different heuristics for updating the forgetfulness parameter which work as well or better?
