@@ -1,6 +1,6 @@
 \chapter{Calibrated Drift Detection Method} \label{chapt:CDDM}
 
-In this chapter we introduce calibrated drift detection method (CDDM), a drift detection method which detects increases in the irreducible error rate, rather than the overall error rate. Section \ref{CDDM:motivation} motivates the approach to concept drift detection taken by CDDM. Section \ref{CDDM:algorithm} provides the actual CDDM algorithm. Section \ref{CDDM:limitations} discusses theoretical and practical limitations of CDDM. Section \ref{CDDM:conclusion} summarises this chapter and discusses future work. 
+In this chapter we introduce calibrated drift detection method (CDDM), a drift detection method which detects increases in the irreducible error rate, rather than the overall error rate. Section \ref{CDDM:motivation} motivates the approach to concept drift detection taken by CDDM. Section \ref{cddm:setting} discusses the setting and notation of CDDM. Section \ref{CDDM:algorithm} provides the actual CDDM algorithm. Section \ref{CDDM:limitations} discusses theoretical and practical limitations of CDDM. Section \ref{CDDM:conclusion} summarises this chapter and discusses future work. 
 
 %-------------------------------------------------------------------
 % MOTIVATION
@@ -20,95 +20,32 @@ Most, if not all, extant drift detectors assume that significant increases in th
     The learner is easily able to discover the relationship between age and priority, but fails to make use of other features. The model thus has a higher error rate for middle aged patients than young or old patients. If there is an increase in the number of middle aged patients with corona virus, then the overall error rate of the model will increase.  
     
     A concept drift detector will may detect the increase in the error rate and signal that the model requires retraining. However, because the actual relationship between instances and labels has not changed, retraining the model would at best be a waste of time, and at worst result in an inferior model trained on a smaller dataset. 
+    
+    Conversely, suppose that instead of an increase in the middle aged patients there is a {\it decrease in middle aged patients}. This will reduce the average difficulty of the prediction task, and reduce the error rate of the model. 
+    
+    Suppose that shortly after this occurs, the clinic decides to change its triage policy for dealing with middle aged patients. Because the model is trained to implement the old policy, its error rate for middle aged patients will further increase, but this increase may be cancelled out by the decrease from the reduced number of middle aged patients. 
+    
+    Thus, a concept drift detector may fail to notice the real drift which has occurred, and the model will not be retrained despite the change in the decision boundary. This situation may therefore result in a false negative.
 \end{displayquote}
-This example illustrates that what a concept drift detector should really be monitoring for is not increases in the overall error rate, but only increases in the error rate which can actually be reduced by retraianing. 
-
-The average error rate (or {\it risk}) of the model is given by
-\begin{align}
-    R =& \Pr(\hat{y}=y) \\
-    =& \int \Pr(\hat{y}\ne y|x)d\Pr(x).
-\end{align}
-A change in the risk can be thus be expressed
-\begin{align}
-	\Delta R =& \int \left( \Pr(\hat{y}\ne y|x) + \Delta \Pr(\hat{y}\ne y|x) \right) d\left( \Pr(x) + \Delta \Pr(x) .\right) \\
-	 &- \int \Pr(\hat{y}\ne y|x)d\Pr(x). \\
-	=& \int \Pr(\hat{y}\ne y|x) d\left(\Delta \Pr(x)\right) \\
-	 &+ \int \Delta \Pr(\hat{y}\ne y|x) d\Pr(x) \\
-	 &+ \int \Delta \Pr(\hat{y}\ne y|x) d\Delta \Pr(x)
-\end{align}
-Thus, the risk can be considered as the sum of three components. The {\bf change in irreducible error}, denoted
-\begin{equation}
-    \Delta R_I = \int \Pr(\hat{y}\ne y|x) d\Delta \Pr(x)
-\end{equation}
-is, the change in error rate due to changes in the instance distribution, rather than a change in the decision boundary. Because the decision boundary, has not changed, the increase in error rate cannot be counteracted by retraining the model. The {\bf change in reducible error}, denoted 
-\begin{equation}
-    \Delta R_I = \int \Delta \Pr(\hat{y}\ne y|x) d\Pr(x) \label{eq:re_err} 
-\end{equation}
-is error which {\it is} due to changes in the decision boundary and so can in principle be reduced by retraining the model. The final component
-\begin{equation}
-    - \int \Delta \Pr(\hat{y}\ne y|x) d\Delta \Pr(x)
-\end{equation}
-is an interaction term between changes in reducible and irreducible error. We will assume this is negligible for the rest of this discussion, so that
-\begin{equation}
-	\Delta R = \Delta R_I + \Delta R_R.
-\end{equation}
-
-Concept drift detection is typically operationalised as detecting an increase in the error rate of the model \cite{gama_survey}. Some drift detectors also monitor for declines in other metrics, such as precision and recall \cite{DDM-OCIa} or any changes in the confusion matrix \cite{LFR}, although for our purposes this makes no difference. Ideally, however, a drift detector should respond only to increases in the reducible error rate, and not the irreducible error rate. 
-
-Detecting increases in the error rate rather than the reducible error rate can lead to two pathologies. The first is that feature drift may occur such that only irreducible error increases. 
-\begin{align}
-    \Delta R_R = 0, \quad \Delta R_I > 0 \quad \rightarrow \quad \Delta R > 0
-\end{align}
-This may trigger a drift detector, despite the fact that retraining will not be beneficial. Intuitively, this is a situation where the average difficulty of the prediction problems increases. Starting learning from scratch will not help, even though the error rate has increased.
-
-The second is that feature drift may occur close to real drift, such that the reducible error rate increases, but the irreducible error rate decreases by at least as much. 
-\begin{align}
-    0 < \Delta R_R \le - \Delta R_I \quad \rightarrow \quad \Delta R \le 0
-\end{align}
-This results in a non-positive change in the overall error rate, so a drift detector will not be triggered when it should. Intuitively, this is a situation where the average difficulty of prediction problems {\it decreases}, but your ability to correctly answer the hard problems has decreased. It may pay to start learning from scratch, but because it looks like your performance is improving you don't consider the option.
-
-Thus, in domains with non-homogeneous risk, and where feature drift may occur, we would like some way of detecting increases in the reducible error rate, rather than increases in the overall error rate. In the following section, we see how CDDM takes an initial step towards solving this problem.
+This example illustrates that a concept drift detector should not monitor for increases in the error rate of the model {\it per se}. Instead it should monitor for increases in rate of {\it reducible} error due to {\it real} drift which is {\it not} predictable {\it ex ante} from the prediction task becoming more difficult on agerage. {\it Virtual} drift which increases the rate of {\it irreducible} error which {\it is} predictable {\it ex ante} is a confounder which can cause false negatives and false positives, such that the model may not be retrained when it should be, and may be retrained when it does not need to be.
 
 %-------------------------------------------------------------------
-% ALGORITHM
+% SETTING
 %-------------------------------------------------------------------
 
-\section{Algorithm} \label{CDDM:algorithm}
+\section{Setting} \label{cddm:setting}
 
-Recall from the introduction that $q$ is the probability of a label given the instance, $\hat{q}$ is is the probability of a label given the instance, $\hat{q}$
-
-CDDM approaches the problem of detecting increases in reducible error rather than overall error by estimating irreducible changes in the error rate, and subtracting this from the overall error rate:
+Let $y$ be the true label given to some instance $x$, and $\hat{y}$ be the label predicted by the model. Due to noise, stochasticity, or the limited inferential capabilities of the learner, there is some probability that the model will make the wrong prediction. We thus denote
 \begin{equation}
-	\Delta R_R = \Delta R - \Delta \hat{R_I}.
+q = \Pr(y=\hat{y})
 \end{equation}
-This is achieved via an estimation of the residual:
-\begin{align}
-	\Delta R - \Delta \hat{R_I} =& \Delta \left( \Pr(\hat{y}\ne y) - \hat{\Pr}(\hat{y}\ne y) \right) \label{eq:cddm_tuna} \\
-	=& \int \left( \Pr(\hat{y}\ne y|x) - \hat{\Pr}(\hat{y}\ne y|x) \right) d\left(\Delta \Pr(x)\right) \\
-	 &+ \int \Delta \left( \Pr(\hat{y}\ne y|x) - \hat{\Pr}(\hat{y}\ne y|x) \right) d\Pr(x) \\
-	=& \int \left( \Pr(\hat{y}\ne y|x) - \hat{\Pr}(\hat{y}\ne y|x) \right) d\left(\Delta \Pr(x)\right) \\
-	 &+ \int \Delta \Pr(\hat{y}\ne y|x) d\Pr(x) \\
-	 &- \int \Delta \hat{\Pr}(\hat{y}\ne y|x) d\Pr(x)
-\end{align}
-If the estimation is accurate then
+as the {\bf reliability} of the model, or the probability that the model will make the correct prediction, for the given instance. 
+
+We assume that the makes probabilistic predictions. We can thus talk about the model {\bf confidence} as the probability assigned by the model to its predicted label, denoted
 \begin{equation}
-	\Pr(\hat{y}\ne y|x) - \hat{\Pr}(\hat{y}\ne y|x) = 0.
+\hat{q} = \hat{\Pr}(y=\hat{y}).
 \end{equation}
-Additionally, a change in the error rate will not be immediately reflected as a change in the estimation of the error rate so 
-\begin{equation}
-	 \int \Delta \hat{\Pr}(\hat{y}\ne y|x) d\Pr(x) = 0.
-\end{equation}
-Thus, Equation \ref{eq:cddm_tuna} simplifies to
-\begin{align}
-	\Delta R - \Delta \hat{R_I} = \int \Delta \Pr(\hat{y}\ne y|x) d\Pr(x) = \Delta R_R.
-\end{align}
-Achieiving the dired result.
-
-Intuitively, CDDM ``places bets" on how likely each predicted label is to be correct. If a prediction is estimated to have probability $p$ of being correct, then CDDM buys a bet for \$$p$. If the prediction turns out to be correct, CDDM receives a payoff of \$1. If the prediction turns out to be incorrect, CDDM receive a payoff of \$0. If CDDM loses a ``significant" amount of money, then it signals that concept drift has been detected.
-
-Concretely, CDDM obtains residual estimations via calibrated probabilistic predictions. A predictor is {\bf calibrated} if it can assign probabilities to events which match the rates at which these events actually occur \cite{superforecasting}\cite{scoring_rules}\cite{calibrating}. For example, if a calibrated predictor assigns a probability of 90\% to ten events, then in expectation nine of those events should in fact obtain. 
-
-Recall that we are denoting $q$ as the probability of a label obtaining a particular value, and $\qhatyhat$ a model's estimation of this value. Thus in our notation, a model is calibrated if $q=\hat{q}$. For the present, we will assume the label $y$ is binary, and so $q=\Pr(y=1)$. A plot of $q$ against $\hat{q}$ is known as a reliability diagram \cite{calibrating}. Figure \ref{fig:calibration} provides an illustration of the reliability diagram for a calibrated predictor.
+A plot of a model's confidence versus its reliability is called a {\bf reliability diagram} \cite{calibrating}, and is illustrated in Figure \ref{fig:calibration}. 
 
 \newcommand{\calibrationgraph}[7][]{
     % args:
@@ -116,7 +53,7 @@ Recall that we are denoting $q$ as the probability of a label obtaining a partic
     \node [below] at (1.25,0) {$\hat{q}$};
     14
     \node [left] at (0,1.25) {$q$};
-    \node [left] at (0,#7) {$\Pr(y_t=\hat{y}_t)$};
+    \node [left] at (0,#7) {$q_t$};
     \node [below] at (#6,0) {$\hat{q}_t$};
     \draw (#2,#3) -- (#4,#5);
     \draw [red] (#6,0) -- (#6,#7);
@@ -132,9 +69,91 @@ Recall that we are denoting $q$ as the probability of a label obtaining a partic
     \label{fig:calibration}
 \end{figure}
 
+When a model's confidence is equal to its reliability, $q=\hat{q}$, we say that the model is {\bf calibrated}. So for example, if a calibrated model assigns 0.9 confidence to ten predictions, in expectation one of these predictions will be incorrect. The reliability diagram in Figure \ref{fig:calibration} is of a calibrated model, as it shows an identity relationship between confidence and reliability.
+
+\newcommand{\calibrationgraphB}[7][]{
+    % args:
+    \draw [thick, <->] (0,1.25) -- (0,0) -- (1.25,0);
+    \node [below] at (1.25,0) {$\hat{q}$};
+    14
+    \node [left] at (0,1.25) {$q$};
+    \node [left] at (0,#7) {$Acc$};
+    \node [below] at (#6,0) {$\mathbb{E}[\hat{q}]$};
+    \draw (#2,#3) -- (#4,#5);
+    \draw [red] (#6,0) -- (#6,#7);
+    \draw [red, dashed] (0,#7) -- (#6,#7);
+}
+
+\newcommand{\virtualdriftgraph}[3][]{
+    \begin{tikzpicture}[scale=3]
+        \calibrationgraphB{0}{0}{1}{1}{0.5+#2}{0.5+#2}
+        \draw [red, thick, ->] (0.5, #3) -- (0.5+#2*1.5, #3);
+    \end{tikzpicture}
+}
+
+\begin{figure}
+    \centering
+    \begin{tikzpicture}[scale=3]
+        \calibrationgraphB{0}{0}{1}{1}{0.5}{0.5}
+    \end{tikzpicture}
+        \includegraphics[width=0.3\textwidth]{images/no_drift.pdf}
+    \caption{A calibrated model.}
+    \label{fig:no_drift}
+\end{figure}
+
+When a model is calibrated, we can estimate the accuracy and error rate of the model from its confidence. Figure \ref{fig:no_drift} shows a reliability diagram plus the distribution over confidence values, and thus the distribution over reliability. The accuracy is the expected value of the reliability 
+\begin{equation}
+    Acc = \mathbb{E}[q]
+\end{equation}
+and the error rate is one minus the accuracy:
+\begin{equation}
+    Err = 1 - Acc = \mathbb{E}[q].
+\end{equation}
+In this manner we may derive an {\it ex ante} estimation of the model's accuracy based on its confidence scores. If the actual {\it ex post} accuracy significantly deviates from this accuracy, then we have evidence that the model is miscalibrated, which we take as evidence of concept drift.
+
+Suppose the average difficulty of the prediction task increases, as described in Section \ref{CDDM:motivation}, and illustrated in Figure \ref{fig:pos_virt}. A calibrated model will decrease in its mean confidence, and our {\it ex  ante} expected error rate will increase. When we observe an {\it ex post} increase in the error rate we will know that this is can be attributed to feature drift rather than due to real drift, and so the model should not be retrained. In other words, we have observed an increase in the irreducible error rather than irreducible error. We can thus avoid false positive.
+
+\begin{figure}
+    \centering
+    \virtualdriftgraph{-0.2}{0.125}     
+    \includegraphics[width=0.3\textwidth]{images/positive_virtual.pdf}
+    \label{fig:pos_virt}
+    \caption{An increase in irreducible error rate.}
+\end{figure}
+
+Conversely, consider the other case described in Section \ref{CDDM:motivation} and illustrated in Figure \ref{fig:co_drift}, where the average difficulty of the prediction task decreases around the same time as real drift occurs. In this case the mean confidence of the model decreases, and so {\it ex ante} error rate decreases. If the {\it ex post} error rate does not decrease, this indicates that concept drift has occurred. In other words, there has been an increase in the reducible error rate, but it has been obscured by a decrease in the irreducible error rate. We can thus detect that the model {\it should} be retrained despite no increase in the overall error rate and thus avoid a false negative.
+
+\begin{figure}
+    \centering
+    \begin{tikzpicture}[scale=3]
+        \calibrationgraphB{0.25}{0}{1}{0.75}{0.75}{0.5}
+        \draw [black, thick, ->] (0.9, 0.8) -- (0.9, 0.5);
+        \draw [red, thick, ->] (0.6, 0.2) -- (0.85, 0.2);
+    \end{tikzpicture}
+        \includegraphics[width=0.3\textwidth]{images/hidden_drift.pdf}
+    \caption{A decrease in irreducible error masking an increase in reducible error.}
+    \label{fig:co_drift}
+\end{figure}
+
+%-------------------------------------------------------------------
+% ALGORITHM
+%-------------------------------------------------------------------
+
+\section{Algorithm} \label{CDDM:algorithm}
+
+Recall from the Section \ref{background:setting} the following definitions. $y$ is the label which corresponds to a given instance. $\hat{y}$ is the point prediction made by the model for the instance. $q$ is the objective probability of a label given the instance. $\hat{q}$ is the subjective probability assigned to a label by a model.  $\qhatyhat$ is the probability assigned by a model to its preferred prediction $\hat{y}$. 
+
+CDDM approaches the problem of detecting increases in reducible error rather than overall error by estimating irreducible changes in the error rate, and subtracting this from the overall error rate:
+
+Intuitively, CDDM ``places bets" on the label it expects to be correct for each instance. If the model assigns probability $\hat{q}$ to its preferred label, then CDDM buys a bet for \$$\hat{q}$. If the prediction turns out to be correct, CDDM receives a payoff of \$1. If the prediction turns out to be incorrect, CDDM receive a payoff of \$0. If CDDM loses a ``significant" amount of money, then it signals that concept drift has been detected.
+
+Concretely, CDDM obtains residual estimations via calibrated probabilistic predictions. A predictor is {\bf calibrated} if it can assign probabilities to events which match the rates at which these events actually occur \cite{superforecasting}\cite{scoring_rules}\cite{calibrating}. For example, if a calibrated predictor assigns a probability of 90\% to ten events, then in expectation nine of these events should in fact occur. In our notation, a model is calibrated if $q=\hat{q}$. A plot of $q$ against $\hat{q}$ is known as a reliability diagram \cite{calibrating}. Figure \ref{fig:calibration} provides an illustration of the reliability diagram for a calibrated predictor.
+
+
+
 How are $\hat{q}$ values to be practically obtained? It is not possible to obtain $\hat{q}$ values for all machine learning techniques. Specifically, this cannot be done for any model which makes only point predictions, and not probabilistic probabilistic predictions. Decision trees are therefore excluded from this discussion. But most popular machine learning techniques produce outputs which can be interpreted as $\hat{q}$ values. For a neural network classifier, the activations of softmax or sigmoid units can be used as $\hat{q}$ values. For ensemble classifiers, the proportions of votes cast for a given label can be interpreted as $\hat{q}$. For a Bayesian model, the posterior probability is naturally interpreted as $\hat{q}$.
 
-Assume we are dealing with a binary label. Let $\id{y=\hat{y}}=\id{y=0}$, $\qyhat=\Pr(y=0)$, and similarly for $\y{1}$, $\yhat{1}$, $\qhat{1}$, and so on (see Introduction for a full explication of notation). Additionally, let
+Let $\id{y=\hat{y}}=\id{y=0}$, $\qyhat=\Pr(y=0)$, and similarly for $\y{1}$, $\yhat{1}$, $\qhat{1}$, and so on (see Introduction for a full explication of notation). Additionally, let
 
 \begin{align}
     \qyhat &= \Pr(y=\hat{y}) \\
@@ -235,20 +254,20 @@ An appropriate choice for window size $N$ can therefore be obtained by 1) if the
 
 \subsection{Calibration}
 
-CDDM assumes that a model starts out calibrated. In this section we consider strategies for ensuring that this is true.
+The second main limitation of CDDM is that it takes as axiomatic that its base learner is calibrated, when in fact few machine learning models are actually calibrated unless measures are taken to ensure this.
+
+
 
 \cite{nn_calibration}
 \cite{trust_model_uncertainty}
 
+If a predictor over-estimates the probabilities of a target outcome (in our case, a correct classification), and $\hat{q}>q$, then the model is {\bf overconfident}. Overconfident models can be considered as ``pushing" values towards 1 in the mapping from $q$ to $\hat{q}$.
+\item Conversely, if a predictor under-estimates the probabilities of a target outcome, and $\hat{q}<q$, then the predictor is {\bf underconfident}. Underconfident models can be considered as pushing $q$ values towards 0.
 
-For the purpose of discussing calibration, we will use the following terms to describe relationships between $q$ and $\hat{q}$.
-\begin{itemize}
-  \item If a predictor’s calibration map is the identity function, such that $q=\hat{q}$, then this predictor is {\bf well-calibrated}.
-  \item If a predictor over-estimates the probabilities of a target outcome (in our case, a correct classification), and $\hat{q}>q$, then the model is {\bf overconfident}. Overconfident models can be considered as ``pushing" values towards 1 in the mapping from $q$ to $\hat{q}$.
-  \item Conversely, if a predictor under-estimates the probabilities of a target outcome, and $\hat{q}<q$, then the predictor is {\bf underconfident}. Underconfident models can be considered as pushing $q$ values towards 0.
-  \item If a predictor is overconfident close to 1 and underconfident close to 0, then the predictor is {\bf extremist}. Extremist models can be considered as pushing $q$ values towards 0 {\it and} 1. Maximum margin methods such as boosted trees and boosted stumps are prone to extremism \cite{calibrating}. Often an extremist predictor can be calibrated by applying a sigmoid-shaped map to subjective probabilities.
-  \item The opposite type to extremisim is {\bf moderatism}, in which the predictor is underconfident close to 1 and overconfident close to 0. Thus, $q$ values are pushed {\it away from} 0 and 1. Na\"{i}ve Bayes models are prone to moderatism due to making unrealistic independence assumptions \cite{calibrating}. 
-\end{itemize}
+If a predictor is overconfident close to 1 and underconfident close to 0, then the predictor is {\bf extremist}. Extremist models can be considered as pushing $q$ values towards 0 {\it and} 1. Maximum margin methods such as boosted trees and boosted stumps are prone to extremism \cite{calibrating}. Often an extremist predictor can be calibrated by applying a sigmoid-shaped map to subjective probabilities.
+
+The opposite type to extremisim is {\bf moderatism}, in which the predictor is underconfident close to 1 and overconfident close to 0. Thus, $q$ values are pushed {\it away from} 0 and 1. Na\"{i}ve Bayes models are prone to moderatism due to making unrealistic independence assumptions \cite{calibrating}. 
+
 The terms ``overconfident" and ``underconfident" come from Tetlock \cite{superforecasting}. ``Extermism" and ``moderatism" are our own terminology. These relationships are illustrated with reliability diagrams in Figure \ref{fig:calib_drift_types}. Note that this list not exhaustive. Any function $f:[0,1]\rightarrow[0,1]$ is a possible relationship between $q$ and $\hat{q}$ for some model.
 
 \begin{figure}%[t!]
@@ -277,111 +296,14 @@ These scenarios can be neatly expressed with reliability diagrams. Figure \ref{f
 
 Figure \ref{fig:co_drift} depicts the scenario in which real and feature drift co-occur, and the latter hides the former. A model in this situation would benefit from retraining, and yet a drift detector which is monitoring the error rate will not be triggered. Figure \ref{fig:pos_virt} depicts the scenario in which feature drift triggers will trigger a drift detector, despite no change in the decision boundary.
 
-\newcommand{\calibrationgraphB}[7][]{
-    % args:
-    \draw [thick, <->] (0,1.25) -- (0,0) -- (1.25,0);
-    \node [below] at (1.25,0) {$\hat{q}$};
-    14
-    \node [left] at (0,1.25) {$q$};
-    \node [left] at (0,#7) {$\Pr(y=\hat{y})$};
-    \node [below] at (#6,0) {$\mathbb{E}[\hat{q}]$};
-    \draw (#2,#3) -- (#4,#5);
-    \draw [red] (#6,0) -- (#6,#7);
-    \draw [red, dashed] (0,#7) -- (#6,#7);
-}
 
-\newcommand{\virtualdriftgraph}[3][]{
-    \begin{tikzpicture}[scale=3]
-        \calibrationgraphB{0}{0}{1}{1}{0.5+#2}{0.5+#2}
-        \draw [red, thick, ->] (0.5, #3) -- (0.5+#2*1.5, #3);
-    \end{tikzpicture}
-}
-
-\begin{figure}
-    \centering
-    \begin{tikzpicture}[scale=3]
-        \calibrationgraphB{0}{0}{1}{1}{0.5}{0.5}
-    \end{tikzpicture}
-        \includegraphics[width=0.3\textwidth]{images/no_drift.pdf}
-    \caption{Original distribution.}
-    \label{fig:no_drift}
-\end{figure}
-
-\begin{figure}
-    \centering
-    \begin{tikzpicture}[scale=3]
-        \calibrationgraphB{0.25}{0}{1}{0.75}{0.75}{0.5}
-        \draw [black, thick, ->] (0.9, 0.8) -- (0.9, 0.5);
-        \draw [red, thick, ->] (0.6, 0.2) -- (0.85, 0.2);
-    \end{tikzpicture}
-        \includegraphics[width=0.3\textwidth]{images/hidden_drift.pdf}
-    \caption{Virtual drift masking real drift.}
-    \label{fig:co_drift}
-\end{figure}
-
-\begin{figure}
-    \centering
-    \virtualdriftgraph{-0.2}{0.125}     
-    \includegraphics[width=0.3\textwidth]{images/positive_virtual.pdf}
-    \label{fig:pos_virt}
-    \caption{Negative drift decreasing the error rate.}
-\end{figure}
 
 What we have shown by these examples is that concept drift detectors should not be monitoring for changes in the error rate, as this influenced by feature drift, and will lead to impaired performance. Instead, we should be monitoring for changes in the reliability diagram of a model. This is the true test for whether real drift has occurred, regardless of what feature drift may or may not be occurring.
 
-\subsection{Scoring Rules}
-
-We begin with the easiest case in which calibration can be achieved: the degenerate case in which models are already calibrated. The most common way to arrive at a model which is calibrated, is to train it to minimise a loss function with certain properties. 
-
-Let $P$ be a probability measure over some outcome space $\Omega$, denoting the subjective probabilities assigned by the predictor. $\omega \in \Omega$ denotes the actual outcome. The predictor’s loss for this prediction is given by a {\bf scoring rule} of the form $S(P,\omega)$. Let $Q$ be the true probability distribution over $\Omega$, then
-\begin{equation}
-	S(P,Q) = \int_x S(P,x)Q(x) 
-\end{equation}
-Is the expected score of a subjective probability $P$. A scoring rule is {\bf proper} if 
-\begin{equation}
-	S(Q,Q) \ge S(P,Q)
-\end{equation}
-for all $P,Q$. That is, no higher score can be achieved than by predicting the true probability distribution. In other words, if you know the true probability distribution, you cannot ``game” the scoring rule and achieve a higher score by guessing something different from the true distribution. A scoring rule is {\bf strictly proper} if
-\begin{equation}
-	S(Q,Q) > S(P,Q)
-\end{equation}
-for all $P,Q$. That is, the {\it only} way to achieve the highest score is by guessing the true probability distribution.
-
-If a proper scoring rule is used as a model’s loss function, and a model is sensibly trained to minimise this loss function, such as with gradient descent, hyperparameter selection on a development set, and early stopping, then the model should end up well calibrated. We now discuss some examples of proper scoring rules, noting if and when these rules are used in machine learning.
-
-One of the most famous scoring rules is the {\bf quadratic scoring rule}, which is strictly proper and has the form
-\begin{equation}
-	S(P,\omega) = 2 P_\omega - P \dot P = 2 P_\omega - \sum_i P_i^2
-\end{equation}
-An affine transformation of this rule yields the equivalent but more elegant Brier scoring rule \cite{scoring_rules}
-\begin{equation}
-	S(P,\omega) = \sum_i (y_i - P_i)^2
-\end{equation}
-where $y_i = \mathds{1}[\omega=i]$. Brier scoring is equivalent to mean square errors, which are used as loss functions in many machine learning contexts, although usually for regression problems rather than classification problems.
-
-Another famous scoring rule is the {\bf logarithmic scoring rule}, which is also strictly proper and takes the form
-\begin{equation}
-	S(P,\omega) = \log (p_\omega)
-\end{equation}
-For binary and categorical predictions, this is equivalent to {\bf categorical cross entropy} which is a very common loss function in deep learning, in which it is more commonly expressed
-\begin{equation}
-	S(P,\omega) = \sum_i y_i \log(p_i)
-\end{equation}
-where $y_i = \mathds{1}[\omega=i]$ again. Thus a deep learning model with this loss function which has been sensibly trained should be well calibrated.
-
-Another common scoring rule which is strictly proper is {\bf spherical scoring} which takes the form
-\begin{equation}
-	S(P,\omega) = \frac{P_\omega}{\|P\|}.
-\end{equation}
-Spherical scoring does not have particular relevance to machine learning.
 
 \subsection{Calibration Maps}
 
-
-
 If a model was not trained using a proper scoring rule, or for some other reason is not well calibrated, then it can become approximately well-calibrated using a {\bf calibration map}. There are several approaches to producing calibration maps, described below.
-
-\subsubsection{Logistic Calibration}
 
 Logistic calibration - also called {\bf Platt scaling} \cite{platt} - calibrates model predictions by passing them through a parametric calibration map, specifically a sigmoid function. If $\bar{p}$ is the (uncalibrated) model output, then a calibrated probability is given by
 \begin{equation}
@@ -400,11 +322,7 @@ To avoid overfitting, Platt recommends modifying the loss values before fitting 
 \end{equation} 
 where $N_0$ is the number of zero-valued losses, and $N_1$ is the number of one-valued losses. 
 
-% \subsubsection Isotonic Calibration}
-% 
-% Isotonic calibration is a non-parametric method of producing calibration maps (cite Zadrozny and Elkan 2002; 2001, Robertson et al., 1988). It follows that it is more flexible than logistic calibration, but also more prone to overfitting. The only assumption isotonic regression makes about the reliability diagram is that it is isotonic, that is, it is monotonically increasing. The pair-adjacent ventilators algorithm (PAV) algorithm is one approach to finding such an isotonic map, as given below (Cite Ayer et al., 1955). TODO: explain PAV.
-
-\subsubsection{Beta Calibration}
+Isotonic calibration is a non-parametric method of producing calibration maps \cite{isotonic_calibration}. It follows that it is more flexible than logistic calibration, but also more prone to overfitting. The only assumption isotonic regression makes about the reliability diagram is that it is isotonic, that is, it is monotonically increasing. 
 
 Beta calibration is another parametric calibration map family \cite{beyond_sigmoids}. It takes the form
 \begin{equation}
