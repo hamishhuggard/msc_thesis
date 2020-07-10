@@ -17,9 +17,9 @@ Most, if not all, extant drift detectors assume that significant increases in th
 \begin{displayquote}
     At a coronavirus emergency clinic, patients with coronavirus symptoms are being triaged. Young patients have a low mortality rate from coronavirus so are given low priority. Old patients have a high mortality rate so are given high priority. Middle aged patients, however, may have high or low mortality depending on other factors, so may be given a high, low, or medium priority. 
     
-    The learner is easily able to discover the relationship between age and priority, but fails to make use of other features. The model thus has a higher error rate for middle aged patients than young or old patients. If there is an increase in the number of middle aged patients with corona virus, then the overall error rate of the model will increase.  
+    The learner is easily able to discover the relationship between age and priority, but fails to make use of other features. The model thus has a higher error rate for middle aged patients than young or old patients. If there is an increase in the number of middle aged patients with coronavirus, then the overall error rate of the model will increase.  
     
-    A concept drift detector will may detect the increase in the error rate and signal that the model requires retraining. However, because the actual relationship between instances and labels has not changed, retraining the model would at best be a waste of time, and at worst result in an inferior model trained on a smaller dataset. 
+    A concept drift detector will detect the increase in the error rate and signal that the model requires retraining. However, because the actual relationship between instances and labels has not changed, retraining the model would at best be a waste of time, and at worst result in an inferior model trained on a smaller dataset. 
     
     Conversely, suppose that instead of an increase in the middle aged patients there is a {\it decrease in middle aged patients}. This will reduce the average difficulty of the prediction task, and reduce the error rate of the model. 
     
@@ -27,7 +27,7 @@ Most, if not all, extant drift detectors assume that significant increases in th
     
     Thus, a concept drift detector may fail to notice the real drift which has occurred, and the model will not be retrained despite the change in the decision boundary. This situation may therefore result in a false negative.
 \end{displayquote}
-This example illustrates that a concept drift detector should not monitor for increases in the error rate of the model {\it per se}. Instead it should monitor for increases in rate of {\it reducible} error due to {\it real} drift which is {\it not} predictable {\it ex ante} from the prediction task becoming more difficult on agerage. {\it Virtual} drift which increases the rate of {\it irreducible} error which {\it is} predictable {\it ex ante} is a confounder which can cause false negatives and false positives, such that the model may not be retrained when it should be, and may be retrained when it does not need to be.
+This example illustrates that a concept drift detector should not monitor for increases in the error rate of the model {\it per se}. Instead it should monitor for increases in rate of {\it reducible} error due to {\it real} drift which is {\it not} predictable {\it ex ante} from the prediction task becoming more difficult on average. An increase in the {\it irreducible} error due to {\it virtual} drift which {\it is} predictable {\it ex ante} is a confounder. It can cause false negatives and false positives, such that the model may not be retrained when it should be, and may be retrained when it does not need to be.
 
 %-------------------------------------------------------------------
 % SETTING
@@ -41,7 +41,7 @@ q = \Pr(y=\hat{y})
 \end{equation}
 as the {\bf reliability} of the model, or the probability that the model will make the correct prediction, for the given instance. 
 
-We assume that the makes probabilistic predictions. We can thus talk about the model {\bf confidence} as the probability assigned by the model to its predicted label, denoted
+We assume our model makes probabilistic predictions. We can thus talk about the model {\bf confidence} as the probability assigned by the model to its predicted label, denoted
 \begin{equation}
 \hat{q} = \hat{\Pr}(y=\hat{y}).
 \end{equation}
@@ -69,7 +69,7 @@ A plot of a model's confidence versus its reliability is called a {\bf reliabili
     \label{fig:calibration}
 \end{figure}
 
-When a model's confidence is equal to its reliability, $q=\hat{q}$, we say that the model is {\bf calibrated}. So for example, if a calibrated model assigns 0.9 confidence to ten predictions, in expectation one of these predictions will be incorrect. The reliability diagram in Figure \ref{fig:calibration} is of a calibrated model, as it shows an identity relationship between confidence and reliability.
+When a model's confidence is equal to its reliability, $q=\hat{q}$, we say that the model is {\bf calibrated} \cite{superforecasting}\cite{scoring_rules}\cite{calibrating}. For example, if a calibrated model makes 10 predictions, and assigns a 0.9 confidence to each of them, then in expectation, one of those predictions will turn out to be incorrect. The reliability diagram in Figure \ref{fig:calibration} is of a calibrated model, as it shows an identity relationship between confidence and reliability.
 
 \newcommand{\calibrationgraphB}[7][]{
     % args:
@@ -111,7 +111,7 @@ and the error rate is one minus the accuracy:
 \end{equation}
 In this manner we may derive an {\it ex ante} estimation of the model's accuracy based on its confidence scores. If the actual {\it ex post} accuracy significantly deviates from this accuracy, then we have evidence that the model is miscalibrated, which we take as evidence of concept drift.
 
-Suppose the average difficulty of the prediction task increases, as described in Section \ref{CDDM:motivation}, and illustrated in Figure \ref{fig:pos_virt}. A calibrated model will decrease in its mean confidence, and our {\it ex  ante} expected error rate will increase. When we observe an {\it ex post} increase in the error rate we will know that this is can be attributed to feature drift rather than due to real drift, and so the model should not be retrained. In other words, we have observed an increase in the irreducible error rather than irreducible error. We can thus avoid false positive.
+Suppose the average difficulty of the prediction task increases, as described in Section \ref{CDDM:motivation}, and illustrated in Figure \ref{fig:pos_virt}. A calibrated model will decrease in its mean confidence, and our {\it ex  ante} expected error rate will increase. When we observe an {\it ex post} increase in the error rate we will know that this can be attributed to feature drift rather than due to real drift, and so the model should not be retrained. In other words, we have observed an increase in the irreducible error rather than reducible error. We can thus avoid false positive.
 
 \begin{figure}
     \centering
@@ -141,68 +141,58 @@ Conversely, consider the other case described in Section \ref{CDDM:motivation} a
 
 \section{Algorithm} \label{CDDM:algorithm}
 
-Recall from the Section \ref{background:setting} the following definitions. $y$ is the label which corresponds to a given instance. $\hat{y}$ is the point prediction made by the model for the instance. $q$ is the objective probability of a label given the instance. $\hat{q}$ is the subjective probability assigned to a label by a model.  $\qhatyhat$ is the probability assigned by a model to its preferred prediction $\hat{y}$. 
+CDDM detects increases in reducible error rather than overall error by monitoring for differences in the {\it ex ante} accuracy and the {\it ex post} accuracy. 
 
-CDDM approaches the problem of detecting increases in reducible error rather than overall error by estimating irreducible changes in the error rate, and subtracting this from the overall error rate:
-
-Intuitively, CDDM ``places bets" on the label it expects to be correct for each instance. If the model assigns probability $\hat{q}$ to its preferred label, then CDDM buys a bet for \$$\hat{q}$. If the prediction turns out to be correct, CDDM receives a payoff of \$1. If the prediction turns out to be incorrect, CDDM receive a payoff of \$0. If CDDM loses a ``significant" amount of money, then it signals that concept drift has been detected.
-
-Concretely, CDDM obtains residual estimations via calibrated probabilistic predictions. A predictor is {\bf calibrated} if it can assign probabilities to events which match the rates at which these events actually occur \cite{superforecasting}\cite{scoring_rules}\cite{calibrating}. For example, if a calibrated predictor assigns a probability of 90\% to ten events, then in expectation nine of these events should in fact occur. In our notation, a model is calibrated if $q=\hat{q}$. A plot of $q$ against $\hat{q}$ is known as a reliability diagram \cite{calibrating}. Figure \ref{fig:calibration} provides an illustration of the reliability diagram for a calibrated predictor.
-
-
-
-How are $\hat{q}$ values to be practically obtained? It is not possible to obtain $\hat{q}$ values for all machine learning techniques. Specifically, this cannot be done for any model which makes only point predictions, and not probabilistic probabilistic predictions. Decision trees are therefore excluded from this discussion. But most popular machine learning techniques produce outputs which can be interpreted as $\hat{q}$ values. For a neural network classifier, the activations of softmax or sigmoid units can be used as $\hat{q}$ values. For ensemble classifiers, the proportions of votes cast for a given label can be interpreted as $\hat{q}$. For a Bayesian model, the posterior probability is naturally interpreted as $\hat{q}$.
-
-Let $\id{y=\hat{y}}=\id{y=0}$, $\qyhat=\Pr(y=0)$, and similarly for $\y{1}$, $\yhat{1}$, $\qhat{1}$, and so on (see Introduction for a full explication of notation). Additionally, let
-
+Intuitively, we can consider CDDM to be placing a ``bet" on each prediction. If the model has confidence $\hat{q}$ in its prediction, then it will buy a bet that it is correct for \$$\hat{q}$. If the prediction turns out to be correct, the model will receive a payoff of \$1, otherwise it will receive a payoff of \$0. The payoff is denoted:
+\begin{equation}
+    \gamma = \begin{cases} 
+        1-\hat{q} & \text{if }y=\hat{y} \\ 
+        -\hat{q} & \text{if }y\ne\hat{y}
+    \end{cases}
+\end{equation}
+The expected value of the payoff under normal, calibrated conditions is zero:
 \begin{align}
-    \qyhat &= \Pr(y=\hat{y}) \\
-    \qhatyhat &= \max(\qhat{0},\qhat{1})
+	\mathbb{E}[\gamma] &= \Pr(y=\hat{y}) \cdot (1-\hat{q}) - \Pr(y\ne \hat{y}) \cdot \hat{q} \\
+	&= q \cdot (1-q) - (1-q) \cdot q \\
+	&= 0. \label{eq:expectation}
 \end{align}
-These indicate the probability of the model making a correct prediction, and the models own estimation of this probability, respectively. 
-
-CDDM takes as a null hypothesis that the base learner is calibrated. That is, the area in Equation \ref{eq:calibration_area} is equal to zero. In this case we have
+If we have observed $n$ payoffs, $\gamma_1,\gamma_2,\dots,\gamma_n$, then we can use Hoeffding's inequality \cite{hoeffding} to bound the probability of seeing a large average payoff:
 \begin{align}
-	\mathbb{E}\left[ \qhatyhat - \id{y=\hat{y}}  \right] &= \qyhat \cdot (\qhatyhat - 1) + (1-\qyhat) \cdot (\qhatyhat-0) \\
-    &= \qyhat\qhatyhat - \qyhat + \qhatyhat - \qyhat\qhatyhat \\
-    &= \qhatyhat - \qyhat.\label{eq:expectation}
+    \Pr\left(  \left| \frac{1}{n} \sum_{i=1}^n \gamma_i - \mathbb{E}\left[\frac{1}{n} \sum_{i=1}^n \gamma_i\right] \right| \ge k \right)
+    &= \Pr\left(  \left| \frac{1}{n} \sum_{i=1}^n \gamma_i \right| \ge k \right) \\
+    &\le 2 \exp\left(-\frac{2n^2k^2}{\sum_{i=1}^n(b_i - a_i)^2}\right) \\
+    \intertext{Where $a_i$ and $b_i$ are lower and upper bounds on $\gamma_i$, respectively. Because $0\le \hat{q} \le 1$, we have $a_t=-1 \le \id{y_t=\hat{y}_t} - \hat{q}_t \le b_t=1$.}
+  &\le \exp\left(-\frac{2n^2k^2}{\sum_{i=1}^n 4}\right) \\
+  &\le \exp\left(-\frac{nk^2}{2}\right). \label{eq:hoeffding}
 \end{align}
+CDDM maintains a sliding window of the most recent $n$ payoff values. Equation \ref{eq:hoeffding} gives a $p$-value for an average payoff across this window at least as extreme as observed. If this value falls below some critical threshold, we may reject the null hypothesis and conclude that the model is miscalibrated. In this case, CDDM will signal that drift has occurred.
 
-Using this expected value, we can bound the probability of $\qhatyhat_t$ and $\id{y=\hat{y}}_t$ values to accumulating to a value as extreme as $k$ at time $T$
-\begin{align}
-    P\left(  \sum_{t=1}^T \frac{\qhatyhat_t - \id{y=\hat{y}}_t}{T} \ge k \right)
-    &\le \exp\left(-\frac{2T^2k^2}{\sum_{t=1}^t(b_t - a_t)^2}\right) \\
-    \intertext{Where $a_t$ and $b_t$ are lower and upper bounds on $\qhatyhat_t-\id{y=\hat{y}}_t$, respectively. Because $0\le \qhatyhat_t, \id{y=\hat{y}}_t\le 1$, we have that $a_t=-1 \le \qhatyhat_t-\id{y=\hat{y}}_t \le b_t=1$, so the right side of the inequality simplifies to}
-  &\le \exp\left(-\frac{2T^2k_T^2}{\sum_{\tau=1}^t 4}\right) \\
-  &\le \exp\left(-\frac{Tk_T^2}{2}\right). \label{eq:hoeffding}
-\end{align}
-This equation gives us a $p$-value of for an observed sequence of $\id{y=\hat{y}}$ and $\qhatyhat$ under the null hypothesis of calibration. If this value falls below some critical threshold, we may reject the null hypothesis and conclude that the model is uncalibrated. 
-
-Similar to several other drift detectors \cite{DDM}\cite{HDDM}\cite{FLORA}, we use two critical thresholds: $\alpha_{warn}$, a warning threshold, and $\alpha_{drift}$, a drift threshold. When $P$ falls below $\alpha_{warn}$ for any $T$ value, CDDM issues a warning that drift may be occurring. When $P$ falls below $\alpha_{warn}$ for any $T$, CDDM signals that drift has been detected, and the referral documents since the earliest $T$ for which $P<\alpha_{warn}$ can be retrieved to retrain the model. We use the values $\alpha_{warn}=0.05$ and $\alpha_{drift}=0.01$.
-
-Equation \ref{eq:hoeffding} indicates a trade-off in our choice of $T$, which in the streaming context denotes how large is the window of recent examples we are testing for miscalibration. The bound shrinks as $T$ and $k_T$ increase. However, if $T$ is large, then $k_T$, the mean value of $\qhatyhat-\id{y=\hat{y}}$ will be diluted by many pre-miscalibration instances. We do not have a principled way to choose a good value of $T$. Instead we propose maintaining a sliding window of $N$ values of $\qhatyhat-\id{y=\hat{y}}$, and testing the most recent $T$ instances for $T=1,2,\dots,N$. This introduces multiple comparisons and requires making a Bonferonni correction to our drift and warning bounds. The full pseudocode is given in Algorithm \ref{alg:cddm_basic}.
+Similar to several other drift detectors \cite{DDM}\cite{HDDM}\cite{FLORA}, we use two critical thresholds: $\alpha_{warn}$, a warning threshold, and $\alpha_{drift}$, a drift threshold. When the $p$-value falls below $\alpha_{warn}$, CDDM emits a warning that drift may be occurring, and all new instances are placed in a buffer. When the $p$-value falls below $\alpha_{drift}$, CDDM indicates that concept drift has occurred. The model is then retrained on the instances in the buffer. The full pseudocode is given in Algorithm \ref{alg:cddm_basic}.
 
 \begin{algorithm}
-    \caption{CDDM}
+    \caption{CDDM algorithm}
     \label{alg:cddm_basic}
     \begin{algorithmic}
-        \Require Warning threshold $\alpha_{warn}$
-        \Require Drift threshold $\alpha_{drift}$
-        \Require Window size $N$
-        \State Window $\gets$ []
-	\For {$y_t, \qyhat_t, \hat{y}_t$ in the data stream}
-%            \State $\qhatyhat \gets \max(\qyhat,1-\qyhat)$
+    \Require Warning threshold $\alpha_{warn}$
+    \Require Drift threshold $\alpha_{drift}$
+    \Require Window size $N$
+    \State Window $\gets$ []
+    \State {\tt status} $\gets$ {\tt normal}
+	\For {$y_t, \hat{q}_t, \hat{y}_t$ in the data stream}
+        \State $\gamma_t \gets \id{y=\hat{y}} - \hat{q}$
+        \State Window $\gets \{\gamma_t\} \cup$ Window
+        \State $n =$ Window.length
+        \If {$n > N$}
             \State Window.pop()
-	    \State Window $\gets (\id{y=\hat{y}} - \qhatyhat) \cup$ Window
-            \For {$T=1,2,\dots,N$}
-                \State Calculate $p$ value for Window[:T]
-                \If {$p \leq \alpha_{drift}/2N$}
-                    \State {\tt status} $\gets$ {\tt drift}
-                \ElsIf {$p_{min} \leq \alpha_{warn}/2N$}
-                    \State {\tt status} $\gets$ {\tt warn}
-                \EndIf
-            \EndFor
-        \EndFor
+        \EndIf
+        \State $k \gets \left| \text{Window.mean} \right|$
+        \State $p \gets 2\exp\left(-\frac{nk^2}{2}\right)$
+        \If {$p \leq \alpha_{drift}$}
+            \State {\tt status} $\gets$ {\tt drift}
+        \ElsIf {$p_{min} \leq \alpha_{warn}$}
+            \State {\tt status} $\gets$ {\tt warn}
+        \EndIf
+    \EndFor
     \end{algorithmic}
 \end{algorithm}
 
@@ -212,127 +202,91 @@ Equation \ref{eq:hoeffding} indicates a trade-off in our choice of $T$, which in
 
 \section{Limitations} \label{CDDM:limitations}
 
-\subsection{Theoretical Limitations}
+CDDM suffers from two major limitations. The first is that CDDM requires learners to be calibrated, but most machine learning algorithms are not calibrated out of the box. The second is that small deviations from calibration will not be detectable by CDDM.
 
-There remains the possibility of miscalibration being undetectable by monitoring the area described in Equation \ref{eq:calibration_area} under certain conditions. One such condition is illustrated in Figure \ref{fig:weird_calibration}. It is not clear when such a situation could arise, and indeed if such a situation is even plausible. Further work is required to resolve this issue.
+\subsection{Calibration}
 
-\begin{figure}
+CDDM requires the base learner to be calibrated. In fact few machine learning models are calibrated out of the box, and require post-hoc transformations of  their probabilistic predictions to become calibrated.
+
+Some models are ``overconfident", meaning that the model's confidence tends to exceed its reliability, $\hat{q}>q$. Some deep learning models such as LeNet \cite{lenet} suffer from overconfidence \cite{nn_calibration}.
+
+Conversely, some models are ``underconfident", meaning that the model's reliability tends to exceed its confidence, $\hat{q}<q$. Some deep learning models such as ResNet \cite{resnet} suffer from underconfidence \cite{nn_calibration}.  
+
+Other models tend to ``extremism", meaning that they are underconfident for confidences close to 0, and overconfident for confidences close to 1.  Extremist models can be considered as pushing $\hat{q}$ values towards 0 and 1 with respect to $q$ values. Maximum margin methods such as boosted trees and boosted stumps are prone to extremism \cite{calibrating}.
+
+The opposite behaviour to extremism is ``moderatism", meaning the model is underconfident for confidence values close to 1 and overconfident for confidence values close to 0. Thus, $\hat{q}$ values are pushed {\it away from} 0 and 1 with respect to $q$ values. Na\"{i}ve Bayes models are prone to moderatism due to making unrealistic independence assumptions \cite{calibrating}. 
+
+The terms ``overconfident" and ``underconfident" are standard in the prediction literature \cite{superforecasting}. ``Extremism" and ``moderatism" are our own terminology. These behaviours are illustrated with reliability diagrams in Figure \ref{fig:calib_drift_types}. 
+
+\begin{figure}%[t!]
     \centering
-    \includegraphics[width=0.5\textwidth]{images/cddm_area2.pdf}
-    \caption{Example of a miscalibration undetectable by CDDM.}
-    \label{fig:weird_calibration}
+    \subfigure[Underconfidence]{
+        \includegraphics[width=0.45\textwidth]{images/overconfident.pdf}
+    }
+    \subfigure[Overconfidence]{
+        \includegraphics[width=0.45\textwidth]{images/underconfident.pdf}
+    }
+    \subfigure[Extremism]{
+        \includegraphics[width=0.45\textwidth]{images/extremist.pdf}
+    }
+    \subfigure[Moderatism]{
+        \includegraphics[width=0.45\textwidth]{images/moderate.pdf}
+    }
+    \caption{Reliability diagrams for a common model behaviours.}
+    \label{fig:calib_drift_types}
 \end{figure}
 
-We now consider the question of choosing an appropriate window size $N$. Given a window size $N$, our drift detection threshold will be given by $\epsilon/N$. Suppose also, that for the most recent $n$ examples we have had $\hat{q}-q=\delta$. That is, the model has become overconfident by $\delta$. Then the p-value will be given by
-\begin{equation}
-    \exp\left(-\frac{n^2\delta^2}{2N}\right)
-\end{equation}
-setting this equal to the threshold will give us the minimum time under the new distribution until the miscalibration can be detected. This gives
-\begin{align}
-    \exp\left(-\frac{n^2\delta^2}{2N}\right) &= \frac{\epsilon}{N} \\
-    \delta &= \sqrt{-\frac{2N}{n^2}\ln\left(\frac{\epsilon}{N}\right)}
-\end{align}
-We get minimum $\delta$ when $n=N$. In this case, it takes the entire window to full up for the drift to be detected. Thus, the range of detectable $\delta$ given a window size $N$ is
-\begin{equation}
-    1 \ge \delta \ge \sqrt{-\frac{2}{N}\ln\left(\frac{\epsilon}{N}\right)} \label{eq:window_size}
-\end{equation}
+Models are often not calibrated because they are designed to optimise some metric other than calibration, such as accuracy. However, even in cases where models {\it are} optimised for calibration, miscalibration can still occur. For example, minimising cross entropy is a standard optimisation objective in deep learning \cite{deep_learning}. This is a proper scoring rule \cite{scoring_rules}, so this optimisation encourages both calibration and accuracy. However, many deep learning models still fail to calibrate \cite{nn_calibration}. This may be due to lack of robustness against dataset shift \cite{dataset_drift}, or overfitting the training data \cite{nn_calibration}.
 
-Figure \ref{fig:cddm_window_size} illustrates the minimum detectable $\delta$ against $N$ (black line), as well as the time to detect miscalibrations of $\delta$ values for a range of $N$ values (dashed lines).
+A model which is not calibrated can be remedied by applying a post-processing function to a model's probabilistic predictions. This function is called a {\bf calibration map} \cite{calibrating}. A variety of methods for generating calibration maps have been developed. Some of the major methods are given below.
+
+Logistic calibration - also called {\bf Platt scaling} \cite{platt} fits a sigmoid function, given by
+\begin{equation}
+	q = \frac{1}{1 + \exp(a\hat{q} + b)}
+\end{equation}
+to model probabilities. The parameters $a$ and $b$ are fitted using maximum likelihood estimation on a calibration set. Logistic calibration tends towards exactly correct calibration when the model's confidence values are normally distributed \cite{beyond_sigmoids}. 
+
+Isotonic calibration is a non-parametric type of calibration map \cite{isotonic_calibration}. It is therefore more flexible than logistic calibration, but more prone to overfitting. The only assumption isotonic regression makes about the reliability diagram is that it is isotonic, that is, it is monotonically increasing. 
+
+Beta calibration is a generalisation of sigmoid calibration \cite{beyond_sigmoids}. A beta calibration map takes the form
+\begin{equation}
+	q = \frac{1}{1 + 1/\left(e^c\frac{\hat{q}^a}{(1-\hat{p})^b}\right) }
+\end{equation}
+where $a,b\ge 0$ so that the map is monotonically non-decreasing. This map can be fitted as easily as a logistic map \cite{beyond_sigmoids}. Beta calibration is intended to overcome some of the drawbacks of logistic calibration, such as distortions for many classifiers including Naive Bayes and Adaboost. Beta calibration tends towards exactly correct calibration when the model's confidence values are beta distributed. Experiments have found beta calibration to be superior to logistic calibration for Na\"{i}ve Bayes, Adaboost, Random Forests, logistic regression, support vector machines, and multilayer perceptrons \cite{beyond_sigmoids}. 
+
+Other calibration map methods include histogram binning \cite{histogram_calibration}, Bayesian binning into quantile (BBQ) \cite{bbq_binning}, matrix and vector scaling \cite{nn_calibration}, and temperature scaling \cite{nn_calibration}\cite{temperature_scaling}.
+
+\subsection{Small Deviations from Calibration}
+
+CDDM cannot detect small deviations from calibration. Suppose the base learner has been calibrated up to time $t-n$, and from $t-n$ to $t$ it has been slightly overconfident (or underconfident). Specifically,
+\begin{equation}
+    \delta_i = \begin{cases}
+        0 & 0 \le i < t-n \\ 
+        \left| \hat{q}_i - q_i \right| & t-n \le i < t
+    \end{cases}
+\end{equation}
+Given a window size $N$, the miscalibration will be on the cusp of detectability from CDDM when the $p$-value given by equation Equation \ref{eq:hoeffding} is equal to the drift detection threshold $\epsilon$: 
+\begin{equation}
+    \epsilon = \exp\left(-\frac{n^2\delta^2}{2N}\right).
+\end{equation}
+Solving for $\delta$ gives the minimum overconfidence value which can be detected within $n$ time steps for a given drift threshold and window size:
+\begin{align}
+    \delta &= \sqrt{-\frac{2N}{n^2}\ln\left(\frac{\epsilon}{N}\right)}.
+\end{align}
+This relationship is plotted for a range of window sizes with drift threshold 0.01 in Figure \ref{fig:cddm_window_size}. In this plot we can see that, for example, an overconfidence of $\delta=0.4$ can be detected within 250 time steps for a window size of 2000.
 
 \begin{figure}
     \centering
     \includegraphics[width=\textwidth]{images/cddm_window_size.pdf}
-    \caption{Detection delay (x-axis) vs $\delta$ (y-axis). The black line gives the minimum detectable $\delta$ for a window size $x$. The dashed lines are detection delays for window sizes of (from left to right) 100, 200, 500, 1000 and 2000.}
+    \caption{Detection delay versus overconfidence magnitude for CDDM.}
     \label{fig:cddm_window_size}
 \end{figure}
 
-An appropriate choice for window size $N$ can therefore be obtained by 1) if there is a smallest miscalibration degree $\delta$ which {\it requires} being detected, then one can obtain the appropriate window size using Equation \ref{eq:window_size}. 2) Otherwise, one may consult Figure \ref{fig:cddm_window_size}, and choose a window size which is appropriately reactive to miscalibration for the target domain.
-
-%-------------------------------------------------------------------
-% CALIBRATION
-%-------------------------------------------------------------------
-
-\subsection{Calibration}
-
-The second main limitation of CDDM is that it takes as axiomatic that its base learner is calibrated, when in fact few machine learning models are actually calibrated unless measures are taken to ensure this.
-
-
-
-\cite{nn_calibration}
-\cite{trust_model_uncertainty}
-
-If a predictor over-estimates the probabilities of a target outcome (in our case, a correct classification), and $\hat{q}>q$, then the model is {\bf overconfident}. Overconfident models can be considered as ``pushing" values towards 1 in the mapping from $q$ to $\hat{q}$.
-\item Conversely, if a predictor under-estimates the probabilities of a target outcome, and $\hat{q}<q$, then the predictor is {\bf underconfident}. Underconfident models can be considered as pushing $q$ values towards 0.
-
-If a predictor is overconfident close to 1 and underconfident close to 0, then the predictor is {\bf extremist}. Extremist models can be considered as pushing $q$ values towards 0 {\it and} 1. Maximum margin methods such as boosted trees and boosted stumps are prone to extremism \cite{calibrating}. Often an extremist predictor can be calibrated by applying a sigmoid-shaped map to subjective probabilities.
-
-The opposite type to extremisim is {\bf moderatism}, in which the predictor is underconfident close to 1 and overconfident close to 0. Thus, $q$ values are pushed {\it away from} 0 and 1. Na\"{i}ve Bayes models are prone to moderatism due to making unrealistic independence assumptions \cite{calibrating}. 
-
-The terms ``overconfident" and ``underconfident" come from Tetlock \cite{superforecasting}. ``Extermism" and ``moderatism" are our own terminology. These relationships are illustrated with reliability diagrams in Figure \ref{fig:calib_drift_types}. Note that this list not exhaustive. Any function $f:[0,1]\rightarrow[0,1]$ is a possible relationship between $q$ and $\hat{q}$ for some model.
-
-\begin{figure}%[t!]
-    \centering
-    \subfigure[Underconfident]{
-        \includegraphics[width=0.45\textwidth]{images/overconfident.pdf}
-    }
-    \subfigure[Overconfident]{
-        \includegraphics[width=0.45\textwidth]{images/underconfident.pdf}
-    }
-    \subfigure[Extremist]{
-        \includegraphics[width=0.45\textwidth]{images/extremist.pdf}
-    }
-    \subfigure[Moderate]{
-        \includegraphics[width=0.45\textwidth]{images/moderate.pdf}
-    }
-    \caption{Reliability diagrams for a few relationships between $q$ and $\hat{q}$.}
-    \label{fig:calib_drift_types}
-\end{figure}
-
-With the vocabulary of calibration and reliability diagrams, we may now return to our problem as laid out in Section \ref{CDDM:motivation}. We wished to derive an algorithm which could detect real drift {\it separately} from feature drift, as it it is only real drift which results in a change in the decision boundary. 
-
-We identified two failure modes of only monitoring for increases in the error rate as a means of detecting concept drift. First, feature drift may trigger a drift detection, due to the average difficulty of the classification tasks increasing. Second, if feature drift and real drift co-occur, then the detector may fail to notice the concept drift due to the average difficulty of the classification tasks decreasing. 
-
-These scenarios can be neatly expressed with reliability diagrams. Figure \ref{fig:no_drift} shows an initial distribution of data. The model is calibrated, and the $\hat{q}$ values centre around 0.5. These two facts together tell us that $\Pr(y=\hat{y})\approx 0.5$. 
-
-Figure \ref{fig:co_drift} depicts the scenario in which real and feature drift co-occur, and the latter hides the former. A model in this situation would benefit from retraining, and yet a drift detector which is monitoring the error rate will not be triggered. Figure \ref{fig:pos_virt} depicts the scenario in which feature drift triggers will trigger a drift detector, despite no change in the decision boundary.
-
-
-
-What we have shown by these examples is that concept drift detectors should not be monitoring for changes in the error rate, as this influenced by feature drift, and will lead to impaired performance. Instead, we should be monitoring for changes in the reliability diagram of a model. This is the true test for whether real drift has occurred, regardless of what feature drift may or may not be occurring.
-
-
-\subsection{Calibration Maps}
-
-If a model was not trained using a proper scoring rule, or for some other reason is not well calibrated, then it can become approximately well-calibrated using a {\bf calibration map}. There are several approaches to producing calibration maps, described below.
-
-Logistic calibration - also called {\bf Platt scaling} \cite{platt} - calibrates model predictions by passing them through a parametric calibration map, specifically a sigmoid function. If $\bar{p}$ is the (uncalibrated) model output, then a calibrated probability is given by
+The smallest overconfidence value which can possibly be detected by CDDM is found by setting $n=N$. That is, it is only detectable when the entire window has filled up with the miscalibrated payoffs. The range of detectable miscalibrations is thus given by 
 \begin{equation}
-	p = \frac{1}{1 + \exp(a\bar{p} + b)}
+    1 \ge \delta \ge \sqrt{-\frac{2}{N}\ln\left(\frac{\epsilon}{N}\right)}. \label{eq:window_size}
 \end{equation}
-where the parameters a and b are fitted using maximum likelihood estimation on a calibration set $(p_1,L_1),\dots,(p_n,L_n)$. Note that this calibration set must be distinct from the training set, but can be the same set as used for (hyper)parameter selection. Specifically, $a$ and $b$ are derived from performing gradient descent on the loss function
-\begin{equation}
-	- \sum_i L_i \log( p_i ) + (1-L_i) \log(1-p_i)
-\end{equation}
-To avoid overfitting, Platt recommends modifying the loss values before fitting the sigmoid calibration map as follows:
-\begin{equation}
-	L_i' = \begin{cases}
-		\frac{N_1 + 1}{N_1 + 2} & \text{if }L_i=1 \\
-		\frac{1}{N_0 + 2} & \text{if }L_i=0 \\
-	\end{cases}
-\end{equation} 
-where $N_0$ is the number of zero-valued losses, and $N_1$ is the number of one-valued losses. 
-
-Isotonic calibration is a non-parametric method of producing calibration maps \cite{isotonic_calibration}. It follows that it is more flexible than logistic calibration, but also more prone to overfitting. The only assumption isotonic regression makes about the reliability diagram is that it is isotonic, that is, it is monotonically increasing. 
-
-Beta calibration is another parametric calibration map family \cite{beyond_sigmoids}. It takes the form
-\begin{equation}
-	p = \frac{1}{1 + 1/\left(e^c\frac{\hat{p}^a}{(1-\hat{p})^b}\right) }
-\end{equation}
-where $a,b\ge 0$ so that the map is monotonically non-decreasing. This map can be fitted as easily as a logistic map \cite{beyond_sigmoids}.
-
-Beta calibration is intended to overcome some of the drawbacks of logistic calibration. Logistic calibration results in distortions for many classifiers including Naive Bayes and Adaboost which can result in worse probability estimates than the original. The  strength of logistic calibration is that it tends towards producing exactly correct calibration when a model's uncalibrated probabilities are normally distributed. Beta calibration, on the other hand, tends towards correct calibration when the uncalibrated probabilities are beta distributed.
-
-Experiments have found beta calibration to be superior to logistic calibration for Na\"{i}ve Bayes, Adaboost, Random Forest, logistic regression, SVM, and MLP \cite{beyond_sigmoids}. 
+The dashed line in Figure \ref{fig:cddm_window_size} indicates this lower bound on detectable miscalibration. This shows that, for example, a miscalibration of magnitude $\delta=0.1$ will be undetectable with a window size of $N=200$.
 
 %-------------------------------------------------------------------
 % CONCLUSION
@@ -340,6 +294,6 @@ Experiments have found beta calibration to be superior to logistic calibration f
 
 \section{Conclusion} \label{CDDM:conclusion}
 
-In this chapter we introduced calibrated drift detection method (CDDM). We argued that a drift detector should detect increases in the reducible error rate rather than the overall error rate, so as to avoid unnecessary retraining. CDDM takes this approach to concept drift detection by detecting when a model becomes uncalibrated. However, CDDM still has some significant limitations. Theoretically, CDDM can only detect mean overconfidence below a certain level determined by the window length. Practically, CDDM assumes that a learner is initially calibrated, whereas most models are not natively calibrated and post-hoc calibration techniques have significant limitations.
+In this chapter we introduced calibrated drift detection method (CDDM). We argued that a drift detector should detect increases in the reducible error rate rather than the overall error rate, so as to avoid unnecessary retraining. CDDM takes this approach to concept drift detection by detecting when a model becomes miscalibrated. However, CDDM still has some significant limitations. Theoretically, CDDM can only detect mean overconfidence below a certain level determined by the window length. Practically, CDDM assumes that a learner is initially calibrated, whereas most models require prediction post-processing to achieve calibration.
 
 A promising direction for future work would be building a calibration map online, and detecting when this calibration map changes, rather than assuming the learner is calibrated in the first place.

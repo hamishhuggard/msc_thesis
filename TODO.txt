@@ -1,37 +1,30 @@
 # TODO
 
+MOVE TO INTRO:
+How are $\hat{q}$ values to be practically obtained? It is not possible to obtain $\hat{q}$ values for all machine learning techniques. Specifically, this cannot be done for any model which makes only point predictions, and not probabilistic probabilistic predictions. Decision trees are therefore excluded from this discussion. But most popular machine learning techniques produce outputs which can be interpreted as $\hat{q}$ values. For a neural network classifier, the activations of softmax or sigmoid units can be used as $\hat{q}$ values. For ensemble classifiers, the proportions of votes cast for a given label can be interpreted as $\hat{q}$. For a Bayesian model, the posterior probability is naturally interpreted as $\hat{q}$.
+
+
+
+
+search for TODOs
+
+for final report, use contributions from introduction with links to resources
+
+talk about CDDM as "undistinguished" rather than poor
+runtime and memory wasn't something I cared about as much
+
+2 page report with thesis and paper as appendix
+
+Rescue the bit I cut out of MDD chapter and put it in introduction.
+
 EXPERIMENTS
- - Describe CD diagrams
- - Describe SIGIR experiments
- - Use SIGIR results
  - Redo null detector
+ - describe bernoulli results in conclusion
 
-INTRODUCTION
- - Make sure contributions match results
-
-BACKGROUND
- - Write conclusion
- - Table of other drift detectors
- - Describe more drift detectors
- - Theoretical results
- - Bayesian detectors
- - Operationalisation
- - Taxonomic diagram of drift types
-
-MDD
- - move operationalisation to introduction
- - make sure the motivation reads as a motivation
 
 CDDM
- - Neural networks calibrated
- - Calibration under dataset shift
- - CDDM uses fixed window (Uses the same default window size as FHDDM and MDDM of 100.)
-
-BDD
- - get rid of windowed BDDM?
-
-CONCLUSION
- - Make sure contributions match results
+ - CDDM parameters?
+   - CDDM uses fixed window (Uses the same default window size as FHDDM and MDDM of 100.)
 
 MISC
  - Glossary
@@ -41,5 +34,5 @@ STYLE
  - "coronavirus" rather than "corona virus"
  - "un/even time series" rather than "sporadic/regularly spaced domains"
  - names of detectors should be lowercase
-
+ - time steps 
 22 items, 3 per day next week

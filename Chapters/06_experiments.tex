@@ -32,7 +32,7 @@ The {\bf F$_1$} score of the drift detector is given by
 \end{equation}
 The {\bf mean delay} is the mean number of time steps between a concept drift occurring and a drift signal being emitted. Because any signals after 250 time steps are considered false positives, this is the maximum value for mean delay. {\bf Memory} is the memory footprint of the drift detector in bytes measured at the end of an experimental trial. {\bf Runtime} is the number of milliseconds between the beginning and end of the experimental trial.
 
-The mean and standard deviation of each of these metrics is reported across all experimental trials. 
+Results are reported in tables in the form ``mean (std)", where ``std" is the sample standard deviation across the experimental trials. The best detector on each metric is rendered in bold. The results are additionally visualised using CD diagrams \cite{cd_diagrams}.
 
 %-------------------------------------------------------------------
 % BERNOULLI
@@ -40,15 +40,11 @@ The mean and standard deviation of each of these metrics is reported across all 
 
 \section{Bernoulli Experiments} \label{Experiments:bernoulli}
 
-In this section we describe a data stream intended to illustrate the benefit of CDDM's approach to concept drift detection. Recall from Section \ref{CDDM:motivation} that feature drift combined with some labels being more difficult to predict than others can result in two pathologies for error-rate based drift detectors. 
+In this section we describe experiments on a data stream which validates the benefit of CDDM's approach to concept drift detection. Specifically, we show how the pathologies discussed in Section \ref{CDDM:motivation} of false positive and false negative drift detections can occur from feature drift and variation in the difficulty of in prediction tasks.
 
-The first pathology occurs when feature drift causes the average difficulty of the prediction task to increase. This will raise the error rate and trigger a false positive from the drift detector. However, retraining the model will be counter-productive as there has been no change in the decision boundary.
+% \subsection{Setting}
 
-The second pathology occurs when real drift occurs around the same time as feature drift causes the average difficulty of the problem to decrease. In this case, the feature drift will cause the error rate to decrease, and the increase in error rate due to the real drift will not be detectable. This may result in a false negative, as the model {\it should} be retrained due to reflect the new decision boundary, but because the error rate has not increased the change will not trigger the drift detector.
-
-\subsection{Setting}
-
-Each instance consists of a Bernoulli variable, and each label is a Bernoulli variable whose rate depends on the value of the instance:
+In this data stream, instances consist of a single Bernoulli feature $x$. Labels $y$ are likewise Bernoulli variables, whose rate depends on the feature value:
 \begin{align}
   \Pr(x=i) &= \begin{cases}
     1-\gamma & \text{if }x=0 \\
@@ -59,78 +55,36 @@ Each instance consists of a Bernoulli variable, and each label is a Bernoulli va
     \beta & \text{if }x=1.
     \end{cases}
 \end{align}
-We will call $\gamma$ the instance rate, $\alpha$ the zero rate, and $\beta$ the one rate. The instance-label joint probability of the data stream may be represented graphically as in Figure \ref{fig:bernoulli}.
+We will call $\gamma$ the feature rate, and $\alpha$ and $\beta$ the label rates. The instance-label joint probability of the data stream is illustrated in Figure \ref{fig:bernoulli}.
 
-We are interested in two kinds of concept drift. First we have feature drift, in which the instance rate changes, but the zero and one rate remain the same.
+We are interested in two kinds of concept drift. First we have feature drift, in which the feature rate changes, but the label rates remain the same.
 \begin{equation}
   (\gamma,\alpha,\beta) \Rightarrow (\gamma',\alpha,\beta)
 \end{equation}
-Second, we have real drift concurrent with virtual drift, in which the zero rate, one rate, and instance rate change.
+Second, we have real drift concurrent with virtual drift, in which the feature rate, {\it and} the label rates change. 
 \begin{equation}
   (\gamma,\alpha,\beta) \Rightarrow (\gamma',\alpha',\beta')
 \end{equation}
-When a drift detector is triggered by real drift, this is a true positive. However, feature drift does not entail an increase in the reducible error. It follows that a model should not be retrained in the case of feature drift. If a drift detector is triggered by feature drift, this is a false positive. 
+When a drift detector is triggered by real drift, this is a true positive. When a drift detector is triggered by feature drift, this is a false positive. Our experiments with Bernoulli data streams consist of 1000 time steps under the pre-drift distribution, followed 1000 time steps in the post-drift distribution. %If a drift detector is triggered after a real drift, then a count of true positives is incremented. If a detector is triggered before a real drift, or after a virtual drift, then a count of false positives is incremented. If a detector is not triggered after a real drift before the 1250 time steps have completed, then a count of false negatives is incremented. 
+%We run 400 iterations of each data stream. 
 
-Our experiments with Bernoulli data streams will consist of 1000 time steps under the original distribution, followed by either a real drift or a feature drift, and then 1000 time steps in the new distribution. If a drift detector is triggered after a real drift, then a count of true positives is incremented. If a detector is triggered before a real drift, or after a virtual drift, then a count of false positives is incremented. If a detector is not triggered after a real drift before the 2000 time steps have completed, then a count of false negatives is incremented. We run 2000 iterations of each data stream. The base learner we use is a na\"{i}ve Bayes. Na\"{i}ve Bayes' are known to be poorly calibrated \cite{calibrating}, so are typically a poor choice to use with CDDM. However, this issue arises due to unrealistic independence assumptions which are not invoked in a one-dimensional instance case such as this.
+We use na\"{i}ve Bayes as our learner. Na\"{i}ve Bayes' are known to be poorly calibrated \cite{calibrating}, so are typically a poor choice to use with CDDM. However, given this data stream has one-dimensional instances, the usual issues of independence assumptions between features does not arise. % Na\"{i}ve Bayes is an acceptable model to use with CDDM on this data stream.
 
-
-The data stream consists of a single Bernoulli variable $x$, and a binary label $y$. Initially, the value of $x$ is distributed as $P(x=1)=p$, and the value of $y$ is given by $y=x$. However, noise is present in the $x=1$ region of feature space, so that with probability $\epsilon$ the label will be negated. That is,
-\begin{equation}
-	P(y=1|x) = \begin{cases} 0 & \text{if $x=0$} \\ 1-\epsilon & \text{if $x=1$}. \end{cases}
-\end{equation}
-The irreducible error rate is thus $p\epsilon$. At time $\tau$, the data stream will drift in one of two ways. The first is a feature drift, in which $P(x=1)$ becomes $1-p$. If $\epsilon(2-p)>0$, then the irreducible error rate will increase, thereby triggering a false positive in an error-rate based drift detector. 
-
-The second is a feature drift (with the same details as above) in addition to a real drift so that $x=1$, the correct label is now $y=0$ (still with a noise rate of $\epsilon$). In this case, if $1<\epsilon+p$ then the change in irreducible error rate will {\it decrease}, resulting in a false negative for a drift detector. 
-
-We evaluated how well drift detectors can differentiate between these two scenarios by fixing the noise level at $\epsilon=0.2$, and for given $p$ values between 0 and 1, running 1000 time steps in the initial concept, and then 1000 time steps in the drifted concept. This is repeated 100 times for each value of $p$ for both the real and virtual drift conditions. The percentage of trials which result in a positive drift detection for each detector are shown in Figures \ref{fig:vdrift_plot} and \ref{fig:rdrift_plot}. We see that CDDM can reliably avoid false positives from virtual drift, unlike HDDM-A and RDDM, although this does come at the cost of lower sensitivity to true positives. 
-
-\begin{figure}
-    \centering
-    \includegraphics[width=\columnwidth]{images/vdrift_plot.pdf}
-    \caption{Percentage of (false) positive drift detections for the Bernoulli data stream with virtual drift.}
-    \label{fig:vdrift_plot}
-\end{figure}
-\begin{figure}
-    \centering
-    \includegraphics[width=\columnwidth]{images/rdrift_plot.pdf}
-    \caption{Percentage of (true) positive drift detection for the Bernoulli data stream with real drift.}
-    \label{fig:rdrift_plot}
-\end{figure}
-
-
-\subsection{Bernoulli-Hard}
-
-To clearly illustrate the comparative advantage of CDDM in data streams with feature drift, we present a data stream called {\bf Bernoulli-hard}. In this data stream, we have one instance which is hard to predict, and one instance which is easy to predict. Specifically, an instance value of zero has zero noise, and an instance value of one has a noise value of 0.2. The instance rate is uniformly sampled.
+In this data stream, we have one feature value whose label is hard to predict, and one feature value whose label is easy to predict. Specifically, a feature an $x=0$ instance is consistently labelled as $y=0$, with no noise. A feature value of $x=1$ is also labelled as $y=0$, but with a noise rate 0.2. The feature rate is uniformly sampled for each instance of the data stream.
 \begin{align}
   \alpha &= 0 \\
   \beta &= 0.2 \\
   \gamma &\sim U[0,1]
 \end{align}
-When virtual drift occurs, the instance rate is reversed. When real drift occurs the one rate is reversed.
-\begin{align}
-  \alpha' &= 0 \\
-  \beta &= 0.8 \\
-  \gamma' &= 1 - \gamma
-\end{align}
-If the initial instance rate is less than 0.5, then after virtual drift we will see an increase in the error rate of the model due to an increase in the rate of ``hard problems". This can lead to false positives for drift detectors which use the error-rate operationalisation (henceforth ``error-rate detectors"). Conversely, when the instance rate is greater than 0.5, when real drift occurs we will see a decrease in the rate of ``hard problems", which will decrease the error rate. This may hide the increase in the error rate due to the real drift itself, and can lead to false negatives. These two scenarios are illustrated in Figure \ref{fig:bernoulli_hard}.
-
-More specifically, the change in error rate due to feature drift will be positive when
-\begin{align}
-  0 &< \Delta E \\
-  &< (1-\gamma)\beta - \gamma \beta \\
-  &< \beta-2\gamma\beta \\
-  \gamma &< 0.5.
-\end{align}
-Thus, any instance rate greater than 0.5 may trigger false positives in error-rate detectors. The change in error rate due to real drift is positive when
-\begin{align}
-  0 &< \Delta E \\
-  &< (1-\gamma)(1-\beta) - \gamma\beta \\
-  &< 1 - \gamma - \beta \\
-  \gamma &< 0.8.
-\end{align}
-Thus false negatives may occur when the instance rate is above 0.8.
-
-The results of the trials on this data stream are given in Table \ref{tab:bernoulli_hard}. We also plot the true positive, false positive and false negative rates against the instance rate to illustrate the results derived in the previous paragraph. 
+Virtual drift is implemented by reversing the feature rate. 
+\begin{equation}
+  (\gamma,\alpha,\beta) \Rightarrow (1-\gamma,\alpha,\beta)
+\end{equation}
+Real drift is implemented by reversing the feature rate {\it and} reversing the first label rate.
+\begin{equation}
+  (\gamma,\alpha,\beta) \Rightarrow (1-\gamma,1-\alpha,\beta)
+\end{equation}
+These two scenarios are illustrated in Figure \ref{fig:bernoulli_hard}.
 
 \begin{figure}
     \centering
@@ -169,10 +123,10 @@ The results of the trials on this data stream are given in Table \ref{tab:bernou
         \node [right] at (1+\textsep, 0.5-\b/2) {$1-\beta$};
         \node [right] at (1+\textsep, 1-\b/2) {$\beta$};
         %--- Inner labels ----
-        \node [scale=0.75] at (\g/2,0.5-\a/2) {$P(x=0,y=0)$};
-        \node [scale=0.75] at (\g/2,1-\a/2) {$P(x=0,y=1)$};
-        \node [scale=0.75] at (0.5+\g/2,0.5-\b/2) {$P(x=1,y=0)$};
-        \node [scale=0.75] at (0.5+\g/2,1-\b/2) {$P(x=1,y=1)$};
+        \node [scale=0.75] at (\g/2,0.5-\a/2) {$\Pr(x=0,y=0)$};
+        \node [scale=0.75] at (\g/2,1-\a/2) {$\Pr(x=0,y=1)$};
+        \node [scale=0.75] at (0.5+\g/2,0.5-\b/2) {$\Pr(x=1,y=0)$};
+        \node [scale=0.75] at (0.5+\g/2,1-\b/2) {$\Pr(x=1,y=1)$};
     \end{tikzpicture}
     \caption{Distribution of the Bernoulli data stream.}
     \label{fig:bernoulli}
@@ -218,26 +172,45 @@ The results of the trials on this data stream are given in Table \ref{tab:bernou
         \node at (0.5+\xSep/2,-\textSep) {Real drift};
         \node at (0.5+\xSep/2,\ySep-\textSep) {Feature drift};
     \end{tikzpicture}
-    \caption{Distributional changes in the Bernoulli-hard data stream.}
+    \caption{Distributional changes in the Bernoulli data stream.}
     \label{fig:bernoulli_hard}
 \end{figure}
 
-\subsection{Bernoulli-Typical}
+If the initial feature rate is less than 0.5, then after virtual drift we will see an increase in the error rate of the model due to an increase in the rate of ``hard problems". 
 
-One may object that the previous data stream was tailor-made to showcase CDDM. We demonstrate that this is not the case with another data stream called {\bf Bernoulli-typical} which gives a much more generic picture of false positive and false negative responses from error-rate detectors. In this dataset we do not hand-pick any of the rates. Instead we sample each of them uniformly.
-\begin{align}
-  \alpha &\sim U[0, 0.5] \\
-  \beta &\sim U[0, 0.5] \\
-  \gamma &\sim U[0, 1]
-\end{align}
-The only constraint we place is that after real drift the zero and one rates should increase. This is because most drift detectors deliberately do not detect decreases in the error rate in case it is a result of learning. Allowing decreases in the zero and one rates would thus give CDDM an unfair advantage.
-\begin{align}
-  \alpha' &\sim U[\alpha, 1] \\
-  \beta' &\sim U[\beta, 1] \\
-  \gamma' &\sim U[0, 1]
-\end{align}
+Conversely, when the feature rate is greater than 0.5, when real drift occurs we will see a decrease in the rate of ``hard problems", which will decrease the error rate. This may hide the increase in the error rate due to the real drift itself, and can lead to false negatives. 
 
-The results of the trials on this data stream are given in Table \ref{tab:bernoulli_hard}.
+More specifically, the change in error rate due to feature drift will be positive when
+\begin{align}
+  0 &< \Delta E \\
+  &< (1-\gamma)\beta - \gamma \beta \\
+  &< \beta-2\gamma\beta \\
+  \gamma &< 0.5.
+\end{align}
+Thus, any feature rate greater than 0.5 may trigger false positives in error-rate detectors. The change in error rate due to real drift is positive when
+\begin{align}
+  0 &< \Delta E \\
+  &< (1-\gamma)(1-\beta) - \gamma\beta \\
+  &< 1 - \gamma - \beta \\
+  \gamma &< 0.8.
+\end{align}
+Thus false negatives may occur when the feature rate is above 0.8.
+
+The results of the trials on this data stream are given in Table \ref{tab:bernoulli}, and illustrated in Figure \ref{fig:bernoulli_cd}. CDDM achieves the highest precision and F$_1$ score of any of the detectors (although not significantly greater than the runner up at $p<0.05$ significance). 
+
+\begin{sidewaystable}
+    \centering
+    \caption{Results of Bernoulli datasets.}
+    \input{tables/bernoulli.tex}
+    \label{tab:bernoulli}
+\end{sidewaystable}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{images/cd_diagrams/bernoulli.pdf}
+    \caption{CD diagram of Bernoulli datasets.}
+    \label{fig:bernoulli_cd}
+\end{figure}
 
 %-------------------------------------------------------------------
 % BENCHMARK DATASETS
@@ -258,7 +231,7 @@ In this section we evaluate the concept drift detection methods we have introduc
 These data streams provide constitute the most popular benchmarks used in the concept drift detection literature. Each of these data streams has the following parameters:
 \begin{itemize}
     \item {\bf Concept Length} The number of instances between concept drifts. If this number is small then the data stream is {\it volatile}, if this number is small then the data stream is {\it stable}.
-    \item {\bf Transition Length} The number of instances over which a concept drift occurs. If the transition length is $n$, and there have been $i$ instances since the concept drift, then the probability that the new concept is used is $P(new-concept)=i/n$, otherwise the previous concept is used. If the transition length is low then the drift is {\it abrupt}. Otherwise the stream is {\it gradual}.
+    \item {\bf Transition Length} The number of instances over which a concept drift occurs. If the transition length is $n$, and there have been $i$ instances since the concept drift, then the probability that the new concept is used is $\Pr(new-concept)=i/n$, otherwise the previous concept is used. If the transition length is low then the drift is {\it abrupt}. Otherwise the stream is {\it gradual}.
     \item {\bf Noise Rate} The rate at which any given label will be replaced with a different label. For binary labels, the label is simply inverted. Otherwise, a different label is chosen at random. If this quantity is high, then the data stream is {\it noisy}.
 \end{itemize}
 We are interested in how drift detector performance varies with noise and transition length. We therefore run experiments using each of the variations of the above datasets
@@ -330,4 +303,4 @@ As in Section \ref{Experiments:benchmark}, the performance of CDDM is poor. CDDM
 
 \section{Conclusion} \label{Experiments:conclusion}
 
-In this chapter we experimentally validated our novel drift, and investigated the performance of drift detectors on a synthetic medical triage dataset. We have seen that BWAF is a competitive drift detector on a battery of benchmark data streams, and a synthetic GP referrals triage data stream. It consistently achieved one of the best precision, recall, F$_1$, detection delays scores. BWAF's memory usage reasonable, consistently within the top quartile, although its runtime was generally not competitive. CDDM did not perform competitively in these experiments. We attribute this to the models being uncalibrated, thus affirming the claim made in Section \ref{CDDM:conclusion} that CDDM should be combined with online calibration for practical usage.
+In this chapter we experimentally validated our novel drift detectors, and investigated the performance of drift detectors on a synthetic medical triage dataset. We have seen that CDDM can achieve leading precision F$_1$ and precision scores on Bernoulli streams with feature drift and uneven noise. We have also seen that BWAF is a competitive drift detector on a battery of benchmark data streams, and a synthetic GP referrals triage data stream. It consistently achieved one of the best precision, recall, F$_1$, detection delays scores. BWAF's memory usage reasonable, consistently within the top quartile, although its runtime was generally not competitive. CDDM did not perform competitively in these experiments. We attribute this to the models being uncalibrated, thus affirming the claim made in Section \ref{CDDM:conclusion} that CDDM should be combined with online calibration for practical usage.

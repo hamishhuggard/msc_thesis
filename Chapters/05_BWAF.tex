@@ -1,6 +1,6 @@
 \chapter{Bayesian Concept Drift Detection} \label{chapt:BDD}
 
-In this chapter we explore Bayesian approaches to concept drift detection. Section \ref{BDD:motivation} motivates a Bayesian approach to concept drift detection. Section \ref{BDD:bddm} introduces Bayesian drift detection method (BDDM), an exact algorithm for computing posteriors probabilities of concept drift. Section \ref{BDD:BWAF} introduces Bayes with adaptive forgetfulness, an efficient method for approximating posterior probabilities of concept drift. Section \ref{BDD:conclusion} summarises this chapter and discusses future work.
+In this chapter we explore Bayesian approaches to concept drift detection. Section \ref{BDD:motivation} motivates a Bayesian approach to concept drift detection. Section \ref{BDD:bddm} introduces Bayesian drift detection method (BDDM), an algorithm for computing posteriors probabilities of concept drift. Section \ref{BDD:BWAF} introduces Bayes with adaptive forgetfulness (BWAF), an efficient method for approximating posterior probabilities of concept drift. Section \ref{BDD:conclusion} summarises this chapter and discusses future work.
 
 %-------------------------------------------------------------------
 % MOTIVATION
@@ -171,7 +171,7 @@ In this chapter we consider methods for deriving a posterior probability distrib
 
 \section{Bayesian Drift Detection Method} \label{BDD:bddm}
 
-In this section we introduce the Bayesian drift detection method (BDDM). BDDM precisely computes posterior distributions over drift points, as well as the error rates at the start and end of the data stream. It is therefore more precise than other drift detectors, but at the cost of having $O(t^2)$ time complexity and $O(t)$ space complexity. We also present a windowed version which is linear in time and constant in space.
+In this section we introduce the Bayesian drift detection method (BDDM). BDDM precisely computes posterior distributions over drift points, as well as the error rates at the start and end of the time series. It is therefore more precise than other drift detectors, but at the cost of having $O(t^2)$ time complexity and $O(t)$ space complexity. %We also present a windowed version which is linear in time and constant in space.
 
 \subsection{Setting}
 
@@ -179,10 +179,9 @@ We pose the problem of computing a posterior over drift points as follows. Given
 \begin{equation}
     Z=z_0,z_1,\dots,z_t
 \end{equation}
-we would like to compute the probabilities that the rate of the series changed at each time step, as well as the probability no change occurred. The time series in question is the series of residuals of the model. A change in the rate of this series indicates that the error rate has changed which indicates drift.
+we would like to compute the probabilities that the rate of the series changed at each time step, as well as the probability no change occurred. The time series in question is the series of residuals of the model. A change in the rate of this series indicates that the error rate has changed which indicates drift. This is the same strategy as used by most other drift detectors \cite{DDM}\cite{ADWIN}\cite{BCMC}, and is referred to as the described as the accuracy-operationalisation in Chapter \ref{chapt:Background}.
 
-We denote the probability that a drift occurred at time step $i$ as $\Pr(d=i)$. Specifically, $\Pr(d=i)$ is the prior probability of drift having occurred at time step $i$. The posterior probability is the probability of drift conditioned on the observed time series, denoted $\Pr(d=i|Z)$. For convenience, we denote the probability that no drift has occurred as $\Pr(d=0)$.
-
+We denote the probability that a drift occurred at time step $i$ as $\Pr(d=i)$. Specifically, $\Pr(d=i)$ is the prior probability. For convenience, we denote the probability that no drift has occurred as $\Pr(d=0)$. The posterior probability is the probability of drift conditioned on the observed time series, denoted $\Pr(d=i|Z)$. 
 
 We can express the posterior probability of drift at a given time step using Bayes' rule:
 \begin{align}
@@ -207,7 +206,7 @@ We require a method for setting unitary priors on possible drift points.
 \end{equation}
 We propose two systems of priors for BDDM, one for evenly spaced time series and one for unevenly spaced time series. Our motivating example of GP referrals triage is an example of an unevenly spaced time series as GP referral documents or clinician labels can arrive at any time.
 
-A natural prior for evenly spaced time series is a geometric distribution \cite{fearnhead}\cite{BCMC}. We suppose that there is a constant rate of concept drift, and that drift may only occur once. This is like flipping a coin at every time step, and allowing drift to occur upon the first heads.
+A natural prior for evenly spaced time series is a geometric distribution \cite{fearnhead}\cite{BCMC}. We suppose that there is a constant rate of concept drift, and that drift may only occur once. This produces the prior %This is akin to modelling occurrence or non-occurrence of concept drift as a coin flip.
 \begin{equation}
   \Pr(d=i) = \begin{cases}
   (1-\lambda)^t & \text{if }i=0 \\
@@ -216,9 +215,9 @@ A natural prior for evenly spaced time series is a geometric distribution \cite{
 \end{equation}
 where $\lambda \in [0,1]$ is the drift rate, which is the only parameter of BDDM.
 
-We can generalise this strategy to interval settings by modelling drift as a Poisson process. Again, we have a ``rate" of drift, but now the rate is per unit time, not per index.
+We can generalise this strategy to unevenly spaced time series by modelling drift as a Poisson process. Again, we have a ``rate" of drift, but now the rate is per unit time rather than per time step.
 \begin{align}
-  \Pr(d=\tau_i) &= \begin{cases}
+  \Pr(d=i) &= \begin{cases}
   P[N(\tau_t)=0]& \text{if }i=0 \\
   P[N(\tau_{i-1})=0]P[N(\tau_i)>0] & \text{if }i>0
   \end{cases} \\
@@ -231,31 +230,30 @@ We can generalise this strategy to interval settings by modelling drift as a Poi
   e^{-\lambda \tau_{i-1}} - e^{-\lambda \tau_i} & \text{if }i>0 \label{eq:prior}
   \end{cases}
 \end{align}
-where $\lambda > 0$ is the drift rate and $\tau_i$ is the time between the arrival of the $i$-th value in the data stream and the first value. Note that if the instances are equispaced then this is equivalent to the geometric prior.
+where $\lambda > 0$ is the drift rate, $\tau_i$ is the time at which the $i$-th value arrives, and $N(\tau)$ is the number of drifts which have occurred at time $\tau$. Note that if the instances are evenly spaced in time then this is equivalent to the geometric prior.
 
 \subsection{Likelihoods}
 
-Suppose we have draw a rate from a uniform distribution, and observe a sequence of Bernoulli trials with this rate. The probability of observing a given sequence is given by the beta function with the number of successful trials and the number of unsuccessful trials as arguments.
+Suppose the error rate of the model $x$ is drawn from a uniform distribution over $[0,1]$. Then the probability of observing a given sequence of residuals is given by the beta function.
 \begin{align}
-  \Pr(Z) &= \int_0^1 x^{\sum_{i=0}^t z_i}(1-x)^{\sum_{i=0}^t 1-z_i} dx \\
-  &= B\left(1+\sum_{i=0}^t z_i,1+\sum_{i=0}^t 1-z_i\right) \\
-  &= \frac{\left(\sum_{i=0}^t z_i\right)! \left(\sum_{i=0}^t 1-z_i\right)!}{(n+1)!}
+  \Pr(Z; x) &= \int_0^1 x^{\sum_{i=0}^t z_i}(1-x)^{\sum_{i=0}^t (1-z_i)} dx \\
+  &= B\left(1+\sum_{i=0}^t z_i,1+\sum_{i=0}^t (1-z_i)\right) \\
+  &= \frac{\left(\sum_{i=0}^t z_i\right)! \left(\sum_{i=0}^t (1-z_i)\right)!}{(n+1)!}
 \end{align}
-where $Z = z_1,z_2,\dots,z_t$ and $B(a,b)$ is the beta function.
+where $B(a,b)$ is the beta function.
 
-If we have a drift point, and the rates for the first and second partition are drawn independently and uniformly, then we have
+We assume that if concept drift occurs, the error rates for before and after the drift are drawn independently. Thus
 \begin{align}
   \Pr(Z|d=k) &= \Pr(Z_{0:k-1})\Pr(Z_{k:t}) \\
-  &= B\left(1+\sum_{i=0}^{k-1} z_i,1+\sum_{i=0}^{k-1} 1-z_i\right) B\left(1+\sum_{i=k}^t z_i,1+\sum_{i=k}^t 1-z_i\right) \label{eq:likelihood}
+  &= B\left(1+\sum_{i=0}^{k-1} z_i,1+\sum_{i=0}^{k-1} (1-z_i)\right) B\left(1+\sum_{i=k}^t z_i,1+\sum_{i=k}^t (1-z_i)\right). \label{eq:likelihood}
 \end{align}
-where $Z_{a:b}=z_a,z_{a+1},\dots,z_b$.
 
 \subsection{Pseudocode}
 
-By combining the priors from Equation \ref{eq:prior} and likelihoods from Equation \ref{eq:likelihood} into Equation \ref{eq:posterior}, we obtain the posterior probabilities of drift at each time step. We can therefore present the entirety of BDDM in Algorith \ref{alg:bddm}. The algorithm is $O(t^2)$ in time complexity and $O(t)$ in space complexity. We can impose a limit on the resource requirements of BDDM by only considering the most recent $N$ instances as possible drift points. This is achieved by maintaining a sliding window of size $N$, and reduces the time complexity to $O(tN)$ and the space complexity to $O(N)$. The sliding window version of BDDM is given in Algorithm \ref{alg:bddm_win}.
+By combining the priors from Equation \ref{eq:prior} and likelihoods from Equation \ref{eq:likelihood} into Equation \ref{eq:posterior}, we obtain the posterior probabilities of drift at each time step. BDDM is a straightforward computation of this equation, as shown in Algorithm \ref{alg:bddm}. Clearly, BDDM is $O(t^2)$ in time complexity and $O(t)$ in space complexity. %We can impose a limit on the resource requirements of BDDM by only considering the most recent $N$ instances as possible drift points. This is achieved by maintaining a sliding window of size $N$, and reduces the time complexity to $O(tN)$ and the space complexity to $O(N)$. The sliding window version of BDDM is given in Algorithm \ref{alg:bddm_win}.
 
 \begin{algorithm}
-    \caption{Full BDDM algorithm}
+    \caption{BDDM algorithm}
     \label{alg:bddm}
     \begin{algorithmic}
         \Require Drift rate $\lambda$
@@ -277,72 +275,66 @@ By combining the priors from Equation \ref{eq:prior} and likelihoods from Equati
     \end{algorithmic}
 \end{algorithm}
 
-\begin{algorithm}
-    \caption{Sliding window BDDM.}
-    \label{alg:bddm_win}
-    \begin{algorithmic}
-        \Require Window size $N$
-        \Require Drift rate $\lambda$
-        \Require Warning threshold $\alpha_{warn}$
-        \Require Drift threshold $\alpha_{drift}$
-        \For {$t=0,1,2,\dots$}
-          \If {$t<N$}
-            \State $c_t \gets (z_t, 1-z_t)$
-            \Comment We store $z$ values in dummy vectors.
-            \State $\hat{\tau}_t \gets \tau_t$
-          \Else
-            \State $c_0 \gets c_0 + c_1$
-            \State $\hat{\tau}_0 \gets \hat{\tau}_1$
-            \For {$i=1,2,\dots,N-2$}
-              \State $c_i \gets c_{i+1}$
-              \State $\hat{\tau}_i \gets \hat{\tau}_{i+1}$
-            \EndFor
-            \State $c_{N-1} \gets (z_t, 1-z_t)$
-            \State $\hat{\tau}_{N-1} \gets \tau_t$
-          \EndIf
-          \For {$k=0,1,2,\dots,\min(t,N-1)$}
-            \State $P_i \gets B\left(1+\sum_{i=0}^{k-1}c_i\right) B\left(1+\sum_{i=k}^t c_i\right) \Pr(d=\hat{\tau}_k;\lambda)$
-            \Comment Where $1$ is a two-dimensional vector.
-          \EndFor
-          \State $P(drift) \gets \frac{\sum_{i=1}^t P_i}{\sum_{i=0}^t P_i}$
-          \If {$P(drift)>\alpha_{warn}$}
-            \State {\tt status} $\gets$ {\tt warning}
-          \ElsIf {$P(drift)>\alpha_{drift}$}
-            \State {\tt status} $\gets$ {\tt drift}
-          \EndIf
-        \EndFor
-    \end{algorithmic}
-\end{algorithm}
+% \begin{algorithm}
+%     \caption{Sliding window BDDM.}
+%     \label{alg:bddm_win}
+%     \begin{algorithmic}
+%         \Require Window size $N$
+%         \Require Drift rate $\lambda$
+%         \Require Warning threshold $\alpha_{warn}$
+%         \Require Drift threshold $\alpha_{drift}$
+%         \For {$t=0,1,2,\dots$}
+%           \If {$t<N$}
+%             \State $c_t \gets (z_t, 1-z_t)$
+%             \Comment We store $z$ values in dummy vectors.
+%             \State $\hat{\tau}_t \gets \tau_t$
+%           \Else
+%             \State $c_0 \gets c_0 + c_1$
+%             \State $\hat{\tau}_0 \gets \hat{\tau}_1$
+%             \For {$i=1,2,\dots,N-2$}
+%               \State $c_i \gets c_{i+1}$
+%               \State $\hat{\tau}_i \gets \hat{\tau}_{i+1}$
+%             \EndFor
+%             \State $c_{N-1} \gets (z_t, 1-z_t)$
+%             \State $\hat{\tau}_{N-1} \gets \tau_t$
+%           \EndIf
+%           \For {$k=0,1,2,\dots,\min(t,N-1)$}
+%             \State $P_i \gets B\left(1+\sum_{i=0}^{k-1}c_i\right) B\left(1+\sum_{i=k}^t c_i\right) \Pr(d=\hat{\tau}_k;\lambda)$
+%             \Comment Where $1$ is a two-dimensional vector.
+%           \EndFor
+%           \State $P(drift) \gets \frac{\sum_{i=1}^t P_i}{\sum_{i=0}^t P_i}$
+%           \If {$P(drift)>\alpha_{warn}$}
+%             \State {\tt status} $\gets$ {\tt warning}
+%           \ElsIf {$P(drift)>\alpha_{drift}$}
+%             \State {\tt status} $\gets$ {\tt drift}
+%           \EndIf
+%         \EndFor
+%     \end{algorithmic}
+% \end{algorithm}
 
 \subsection{Comparison with other Drift Detectors}
 
-BDDM is closely related, but distinct, from other Bayesian approaches to concept drift detection and change point detection. The only other Bayesian method which is intended to be directly applied to machine learning on volatile data streams is BCMC \cite{BCMC}. However, this algorithm requires maintaining an ensemble of one model per potential drift point. It is therefore too computationally expensive for many applications. The work of Adams and MacKay \cite{adams_mackay}, Barry and Hartigan \cite{barry_hartigan}, and Fearnhead \cite{fearnhead} are concerned with the more general problem of Bayesian multiple change-point detection in data streams, and so cannot be directly applied to our problem.
+BDDM is closely related, but distinct, from other Bayesian approaches to concept drift detection and change point detection. The only other Bayesian method which is intended to be directly applied to machine learning on volatile data streams is BCMC \cite{BCMC}. However, this algorithm requires maintaining an ensemble of one model per potential drift point, and so is too computationally expensive for many applications. The work of Adams and MacKay \cite{adams_mackay}, Barry and Hartigan \cite{barry_hartigan}, and Fearnhead \cite{fearnhead} are concerned with the more general problem of Bayesian multiple change-point detection in data streams, and so cannot be directly applied to our problem.
 
-Modelling drift in a Bayesian manner has many advantages compared to other drift detection methods. By encoding information about time intervals in our priors, we can apply drift detection to both unevenly spaced time series {\it and} evenly spaced time series. We are not aware of any other drift detectors which accommodate unevenly spaced time series. Why is this important? Suppose we receive one hundred instance within an hour, then no instances for a year, then another hundred instances in an hour. If we detect drift between the first and last instance, then it is overwhelmingly likely that the drift point occurred in the year-long fallow period. If a drift detector does not account for unevenly spaced time series, then this information will be lost.
+Modelling drift in a Bayesian manner has many advantages compared to other drift detection methods. By encoding information about time intervals in our priors, we can apply drift detection to both unevenly spaced time series and evenly spaced time series, a feature which most other drift detectors do not possess \cite{sedanspot}. This allows the Bayesian calculations to have more common sense behaviour, such as assigning a higher probability to a concept drift occurring between consecutive instances separated by one day, than consecutive instances separated by one hour.
 
-Another advantage of this Bayesian approach is that it does not require parameter tuning. The only parameter is the rate of drift used to calculate priors. This has an intuitive meaning, and its approximate magnitude can be guessed for the target domain. This is particularly important in concept drift detection, as we often do not have annotated historical data for parameter tuning. There are few other drift detectors which have such simple parameters \cite{DDM}\cite{CUSUM}. Other drift detectors require tuning thresholds \cite{ADWIN}\cite{HDDM}, window sizes \cite{STEPD}\cite{PL}, or decay rates \cite{HDDM}\cite{EWMA}, which do not have intuitive meanings. The windowed version of BDDM is not a parameter {\it per se}, and should simply be set according to the computational resources available.
+Another advantage of BDDM is that it does not require parameter tuning. The only parameter is the rate of drift used to calculate priors. This has an intuitive meaning, and its approximate magnitude should be apparent in most domains. This is particularly important in concept drift detection, as we often do not have annotated historical data for parameter tuning. There are few other drift detectors which have such simple parameters \cite{DDM}\cite{CUSUM}. Other drift detectors require tuning thresholds \cite{ADWIN}\cite{HDDM}, window sizes \cite{STEPD}\cite{PL}, or decay rates \cite{HDDM}\cite{EWMA}, which do not have intuitive meanings. %The windowed version of BDDM is not a parameter {\it per se}, and should simply be set according to the computational resources available.
 
-Because we are assigning precise probabilities to each candidate drift point, we can graphically plot the probability mass function (pmf) and cumulative mass function (cmf) of concept drift, as shown in Figure \ref{fig:bayes_pdf}. This makes the drift detector more interpretable. Plotting a pmf or cmf is possible in principle for other drift detectors which explicitly test several candidate drift points, such as ADWIN and SEED. However, because these detectors use frequentist statistics and bound probabilities rather than estimating them, these distributions would be imprecise and non-unitary.
+Because we are assigning precise probabilities to each candidate drift point, we can graphically plot the probability mass function (PMF) and cumulative mass function (CMF) of concept drift, as shown in Figure \ref{fig:bayes_pdf}. This makes the drift detector more interpretable. Plotting a PMF or CMF is possible in principle for other drift detectors which explicitly test several candidate drift points, such as ADWIN \cite{ADWIN} and SEED \cite{SEED}. However, because these detectors use frequentist statistics and bound probabilities rather than estimating them, these distributions would be imprecise and non-unitary.
 
-
-
-Another benefit of assigning probabilities to candidate drift point is it allows us to model the posterior distribution over data stream rates before and after the drift point. The posterior distribution over rates in a stable Bernoulli stream is given by the beta distribution.
+Another benefit of assigning probabilities to candidate drift point is it allows us to model the posterior distribution over the rates of Bernoulli streams before and after the drift point. The posterior distribution over rates in a stable Bernoulli time series is given by the beta distribution.
 \begin{align}
-  \Pr(q|Z) &= \frac{ x^{\sum_{i=0}^t z_i}(1-x)^{\sum_{i=0}^t 1-z_i} }{B\left(1+\sum_{i=0}^t z_i,1+\sum_{i=0}^t 1-z_i\right)}. \label{eq:rate_posterior}
+  \Pr(q|Z) &= \frac{ x^{\sum_{i=0}^t z_i}(1-x)^{\sum_{i=0}^t 1-z_i} }{B\left(1+\sum_{i=0}^t z_i,1+\sum_{i=0}^t 1-z_i\right)} \label{eq:rate_posterior}
 \end{align}
-Thus, the posterior distribution over rates prior to the drift can be calculated from a sum of beta distributions, weighted by the posterior probabilities of each drift point.
+where $q$ is the rate of the Bernoulli stream (the error-rate). Thus, the pre-drift posterior distribution over rates can be calculated from a sum of beta distributions, weighted by the posterior probabilities of each drift point.
 \begin{align}
   \overrightarrow{\Pr}(q) &= P_0 \Pr(q|Z_{0:t}) + \sum_{i=1}^t P_i \Pr(q|Z_{0:i-1}).
 \end{align}
-We can similarly derive the posterior distribution over rates after the drift.
+We can similarly derive the post-drift posterior distribution over rates.
 \begin{align}
   \overleftarrow{\Pr}(q) &= \sum_{i=0}^t P_i \Pr(q|Z_{i:t}).
 \end{align}
-An illustration of these posterior distributions is given in Figure \ref{fig:posterior_rates}. These add further interpretability to MDDM. Because pmfs cannot be accurately derived using other drift detectors, these posterior distributions are {\it a fortiori} unfeasible for other drift detectors.
-
-
-
-
+An illustration of these posterior distributions is given in Figure \ref{fig:posterior_rates}. These posterior distributions add to the interpretability of BDDM, and allow retraining decisions to be made on the basis of expected utility.
 
 \begin{figure}
     \centering
@@ -386,13 +378,13 @@ We now introduce Bayes With Adaptive Forgetfulness (BWAF). This is a drift detec
 
 From the Equation \ref{eq:rate_posterior}, we saw that:
 \begin{equation}
-    \Pr(q|Z) \propto \prod_{i=0}^t (1-x)^{1-z_i}x^{z_i}.
+    \Pr(q|Z) \propto \prod_{i=0}^t x^{z_i}(1-x)^{1-z_i}.
 \end{equation}
 or in log form
 \begin{equation}
-    \ln\left(\Pr(q|Z)\right) \propto \sum_{i=0}^t (1-z_i)\ln(1-x) + \sum_{i=0}^t z_i z\ln(x).
+    \ln\left(\Pr(q|Z)\right) \propto \sum_{i=0}^t z_i z\ln(x) + \sum_{i=0}^t (1-z_i)\ln(1-x).
 \end{equation}
-We see that the posterior accumulates updates from each observation. We wish to estimate the current rate of the data stream at time $t$. Because drift may have occurred at any point in the past, we should give more recent updates more weights. A natural way to do this is with exponentially decaying weights. Hence, we can heuristically estimate the posterior distribution over rates as:
+In this formulation, it is natural to think of the posterior as accumulating update terms from each new observed value. We wish to estimate the current rate of the Bernoulli series at time $t$. Because drift may have occurred at any point in the past, we should give greater weights to the more recent updates. A natural way to do this is with exponentially decaying weights. Hence, we can heuristically estimate the posterior distribution over rates as:
 % \begin{align}
 %     \ln\left(P(q|Z)\right) \propto \sum_{i=0}^t \gamma^{t-i} (1-z_i)\ln(1-x) + \sum_{i=0}^t \gamma^{t-i} z_i z\ln(x) \label{eq:horse}
 % \end{align}
@@ -406,51 +398,51 @@ where $0\le\gamma\le 1$ is the {\bf forgetfulness parameter}. Converting this ba
 \end{equation}
 Which can be expressed more compactly as
 \begin{equation}
-    \overleftarrow{\Pr}(q) = \frac{(1-x)^a x^b}{B(a+1,b+1)} \label{eq:banana}
+    \overleftarrow{\Pr}(q) = \frac{x^a (1-x)^b }{B(a+1,b+1)} \label{eq:banana}
 \end{equation}
 with
 \begin{align}
-    a &= \sum_{i=0}^t (1-z_t)\gamma^{\tau_t-\tau_i} \\
-    b &= \sum_{i=0}^t z_t\gamma^{\tau_t-\tau_i}.
+    a &= \sum_{i=0}^t z_t\gamma^{\tau_t-\tau_i} \\
+    b &= \sum_{i=0}^t (1-z_t)\gamma^{\tau_t-\tau_i}.
 \end{align}
-Thus the current posterior distribution over data stream rates at time $t$ can be derived from Equation \ref{eq:banana} and the following update rules
+Thus the current posterior distribution over rates at time $t$ can be derived from Equation \ref{eq:banana} and the following update rules
 \begin{align}
     a_t &= \begin{cases} 
-        (1-z_t) & \text{if $t=0$} \\ 
-        (1-z_t) + \gamma^{\tau_t-\tau_{t-1}} a_{t-1} & \text{if $t>0$} 
+        z_t & \text{if $t=0$} \\ 
+        z_t + \gamma^{\tau_t-\tau_{t-1}} a_{t-1} & \text{if $t>0$} 
     \end{cases} \\
     b_t &= \begin{cases} 
-        z_t & \text{if $t=0$} \\ 
-        z_t + \gamma^{\tau_t-\tau_{t-1}} b_{t-1} & \text{if $t>0$} 
+        (1-z_t) & \text{if $t=0$} \\ 
+        (1-z_t) + \gamma^{\tau_t-\tau_{t-1}} b_{t-1} & \text{if $t>0$} 
     \end{cases}
 \end{align}
-We call this pmf the retrograde amnesiac distribution, as it ``forgets" about about old data stream values.
+We call this PMF the retrograde amnesiac distribution, as it ``forgets" about about older values from the time series.
 
-We now wish to estimate the initial rate of the data stream. Naturally, we should use the opposite weighting scheme as for the retrograde amnesiac distribution. This can be easily achieved with
+We now wish to estimate the initial rate of the Bernoulli stream. Naturally, we should use the opposite weighting scheme as for the retrograde amnesiac distribution. This can be easily achieved with
 \begin{equation}
-    \overrightarrow{\Pr}(q) = \frac{(1-x)^{A-a} x^{B-b}}{B(A-a+1,B-b+1)} \label{eq:banana_two}
+    \overrightarrow{\Pr}(q) = \frac{x^{A-a} (1-x)^{B-b}}{B(A-a+1,B-b+1)} \label{eq:banana_two}
 \end{equation}
 where
 \begin{align}
-    A &= \sum_{i=0}^t (1-z_t) \\
-    B &= \sum_{i=0}^t z_t.
+    A &= \sum_{i=0}^t z_t \\
+    B &= \sum_{i=0}^t (1-z_t).
 \end{align}
 These have the update rules:
 \begin{align}
     A_t &= \begin{cases} 
-        (1-z_t) & \text{if $t=0$} \\ 
-        (1-z_t) + A_{t-1} & \text{if $t>0$} 
+        z_t & \text{if $t=0$} \\ 
+        z_t + A_{t-1} & \text{if $t>0$} 
     \end{cases} \\
     B_t &= \begin{cases} 
-        z_t & \text{if $t=0$} \\ 
-        z_t + B_{t-1} & \text{if $t>0$} .
+        (1-z_t) & \text{if $t=0$} \\ 
+        (1-z_t) + B_{t-1} & \text{if $t>0$} .
     \end{cases}
 \end{align}
-We call this pmf the anterograde amnesiac distribution, as it ``forgets" about about {\it recent} data stream values.
+We call this PMF the anterograde amnesiac distribution, as it forgets about about {\it recent} values of the time series.
 
 \subsection{Adaptive Forgetfulness}
 
-With posterior distributions over the initial rate and current rate of the data stream, we can compute the probability that the rate has increased. 
+With posterior distributions over the initial rate and current rate of the Bernoulli stream, we can compute the probability that the rate has increased. 
 \begin{align}
     \Pr(q_t > q_0) &= \int_0^1 \overrightarrow{\Pr}(q_0) \int_{q_0}^1 \overleftarrow{\Pr}(q_t) ~dq_t ~ dq_0.
 \end{align}
@@ -474,21 +466,22 @@ A good way to get around this problem is to dynamically adjust the forgetfulness
         \Pr(q_t > q_0) & \text{when }t>0
     \end{cases}
 \end{equation}
-If no drift has occurred, the anterograde amnesiac distribution will converge towards the current rate. The retrograde amnesiac distribution will oscillate around the current rate, and the drift probability will oscillate around 0.5. The retrograde amnesiac distribution will thus remain high-entropy. When drift occurs, the the drift probability will increase. The forgetfulness parameter will also increase, allowing the retrograde amnesiac to converge towards the current distribution while the anterograde amnesiac continues to estimate the original distribution, thereby further increasing the forgetfulness parameter. The drift probability and the forgetfulness parameter will continue to mutually re-inforce one another, until the drift probability reaches the critical threshold. 
+
+The progression of the anterograde and retrograde amnesiac distributions is illustrated in Figure \ref{fig:bwaf_progress}. If no drift has occurred, the anterograde amnesiac distribution will converge towards the current rate. The retrograde amnesiac distribution will oscillate around the current rate, and the drift probability will oscillate around 0.5. The retrograde amnesiac distribution will thus remain high-entropy. When drift occurs, the the drift probability will increase. The forgetfulness parameter will also increase, allowing the retrograde amnesiac to converge towards the current distribution while the anterograde amnesiac continues to estimate the original distribution, thereby further increasing the forgetfulness parameter. The drift probability and the forgetfulness parameter will continue to mutually reinforce one another, until the drift probability reaches the critical threshold. 
 
 The pseudocode for the full BWAF procedure is given in Algorithm \ref{alg:bwaf}
 
 \subsection{Comparison with Other Drift Detectors}
 
-BWAF retains several of the advantages of BDDM. It retains the ability to view the posterior distribution over the current and initial rates of the data stream. It does not retain the ability to plot a pmf or cmf of drift occurring, although one can create a diagram analagous to a cmf by plotting the drift probability over time. BWAF is therefore not as interpretable than BDDM, but is still more interetable than most drift detectors. 
+BWAF retains several of the advantages of BDDM. It retains the ability to view the posterior distribution over the current and initial rates of the Bernoulli stream. It does not retain the ability to plot a PMF or CMF of drift occurring, although one can create a diagram analagous to a CMF by plotting the drift probability over time. BWAF is therefore not as interpretable than BDDM, but is still more interetable than most drift detectors. 
 
 As with BDDM, BWAF can accomodate unevenly spaced time series. The choice of units for these intervals will affect the performance of BWAF, and choosing appropriate units is not straightforward. One might adopt the heuristic that the units should be such that the mean interval is one, so that BWAF will behaviour similarly with unevenly spaced time series and evenly spaced time series. 
 
-A major advantage of BWAF is that it does not have any parameters. By dynamically adjusting the forgetting parameter it can in principle detect drifts of any magnitude of any level of abruptness. It is not clear if the same is true of any other drift detectors. DDM has no parameters, but cannot detect drifts which are small compared to sigma \cite{DDM}. In this respect, BWAF is superior even to BDDM. As aforementioned, in the case of unevenly spaced time series there is an implicit parameter in the choice of interval units. However, given that other drift detectors do not even accommodate unevenly spaced time series, the point still goes to BWAF. 
+A major advantage of BWAF is that it does not have any parameters. By dynamically adjusting the forgetting parameter it can in principle detect drifts of any magnitude or any level of abruptness. It is not clear if the same is true of any other drift detectors. DDM has no parameters, but cannot detect drifts which are small compared to sigma \cite{DDM}. In this respect, BWAF is superior even to BDDM, which has the drift rate parameter. As aforementioned, in the case of unevenly spaced time series there is an implicit parameter in the choice of interval units. %However, given that other drift detectors do not even accommodate unevenly spaced time series, the point still goes to BWAF. 
 
-Further advantages of BWAF are that it is relatively simple and easy to understand, it can be easily adapted to detect drift in both directions, and that it is extremely memory efficient, only requiring four registers. 
+% Further advantages of BWAF are that it is relatively simple and easy to understand, it can be easily adapted to detect drift in both directions, and that it is extremely memory efficient, only requiring four registers. 
 
-It is interesting to note that BWAF has parallels with many disparate approaches to drift detection. The Bayesian connection has already been mentioned. Like DDM and EDDM, BWAF derives p-values from changes in the distribution over data stream rates \cite{DDM}\cite{EDDM}. Similar to ADWIN, a parameter of the model adapts online depending on drift conditions \cite{ADWIN}. Finally, the exponential decay of distribution updates is very similar to EWMA \cite{EWMA}. 
+It is interesting to note that BWAF has parallels with many disparate approaches to drift detection. The Bayesian connection has already been mentioned. Like DDM and EDDM, BWAF derives p-values from changes in the distribution over the rates of Bernoulli series \cite{DDM}\cite{EDDM}. Similar to ADWIN, a parameter of the model adapts online depending on drift conditions \cite{ADWIN}. Finally, the exponential decay of distribution updates is very similar to EWMA \cite{EWMA}. 
 
 \begin{algorithm}
     \caption{BWAF algorithm}
@@ -520,6 +513,6 @@ It is interesting to note that BWAF has parallels with many disparate approaches
 
 \section{Conclusion} \label{BDD:conclusion}
 
-In this chapter we have introduced BDDM, a drift detector which computes exact posterior probabilities of drift. We have also introduced BWAF, a heuristic drift detection method inspired by BDDM. These detectors offer many advantages compared to other drift detectors. They accomodate unevenly spaced time series as well as evenly spaced time series. They simplify the task of parameter tuning. They are also more transparent than other drift detectors. These detectors help bridge the gap between concept drift detection research and practical data science by providing solutions to some of the problems which come up in real applications which other drift detection methods are unprepared to deal with.
+In this chapter we have introduced BDDM, a drift detector which computes exact posterior probabilities of drift. We have also introduced BWAF, a heuristic drift detection method inspired by BDDM. These detectors offer many advantages compared to other drift detectors. They accommodate unevenly spaced time series as well as evenly spaced time series. They simplify the task of parameter tuning. They are also more transparent than other drift detectors. %These detectors help bridge the gap between concept drift detection research and practical data science by providing solutions to some of the problems which come up in real applications which other drift detection methods are unprepared to deal with.
 
-For future research, it would be useful to explore other methods for bounding the space and time complexity of BDDM. The fixed window approach is somewhat ad-hoc. Other Bayesian change point detection algorithms have made use of Monte Carlo simulation \cite{BCMC}. Further, it would be useful to theoretically explore BWAF. Can performance guarantees be obtained for BWAF? Are there different heuristics for updating the forgetfulness parameter which work as well or better?
+For future research, it would be useful to theoretically explore BWAF. Can performance guarantees be obtained? Are there different heuristics for updating the forgetfulness parameter which work as well or better?

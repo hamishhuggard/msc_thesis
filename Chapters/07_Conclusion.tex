@@ -12,16 +12,27 @@ The following list highlights the major achievements of our research:
 
 \noindent{\bf Chapter \ref{chapt:MDD}}
 \begin{itemize}
-  \item We introduced a framework for providing early warnings that a model requires retraining or recall, the multiple drift detector (MDD). MDD monitors the instance distribution, the label distribution, {\it and} the instance-label joint distribution for signs of drift. MDD is constructed out of an ensemble of existing drift detectors, and has significant flexibility in its implementation. We also present a graphical interface for visualising the history of the status of MDD.
+  \item We introduced multiple drift detector (MDD), a framework  for monitoring for several types of concept drift, specifically real drift, label drift, and feature drift.
+  \item This allows users to receive early warnings that a model is no longer fit for purpose due to changes in the instance distribution, so that the model can be recalled if necessary.   
+  \item MDD is flexible and can be implemented using any existing drift detection method.
+  \item We also introduced a graphical interface for visualising the evolution of the data stream.
+%   introduced a framework for providing early warnings that a model requires retraining or recall, the multiple drift detector (MDD). MDD monitors the instance distribution, the label distribution, {\it and} the instance-label joint distribution for signs of drift. MDD is constructed out of an ensemble of existing drift detectors, and has significant flexibility in its implementation. We also present a graphical interface for visualising the history of the status of MDD.
 \end{itemize}
 {\bf Chapter \ref{chapt:CDDM}}
 \begin{itemize}
-  \item We introduced a detection method which can detect reducible, rather than irreducible drift, the calibrated drift detection method (CDDM). This technique does require that the base learner is calibrated.
+  \item We introduced calibrated drift detection method (CDDM), a drift detector which only detects reducible, and not irreducible, performance degradation. 
+  \item CDDM is thus able to avoid false positives due to feature drift which do not change the decision boundary. In these cases, retraining the model is at best pointless and at worst detrimental due to reducing the size of the training data.
+  \item We demonstrated the value of CDDM by achieving the highest F$_1$ score on a Bernoulli data stream with feature drift and variation in prediction difficulty.
 \end{itemize}
 {\bf Chapter \ref{chapt:BDD}}
 \begin{itemize}
-  \item We introduced a drift detection method which calculates exact posterior probabilities of concept drift having occurred at each time step, Bayesian drift detection method (BDDM). It also calculates posterior distributions over the values of performance metrics both before and after the occurrence concept drift.
-  \item We also introduced beta with adaptive forgetfulness (BWAF), an efficient heuristic-based drift detection method inspired by BDDM. BWAF computes posterior probabilities of drift having occurred, although unlike BDDM, the posteriors for past time steps are not updated in light of new evidence. It is, however, very space and time efficient. It also does not require parameter tuning.
+  \item We introduced Bayesian drift detection method (BDDM), a method for exactly calculating posterior probabilities of drift timing and performance degradation. 
+  \item This allows user to make more rational decisions about model retraining, based on expected utility. 
+  \item BDDM is able to accommodate uneven time series, by factoring the spaces between instances into prior values.
+  \item We also introduce beta with adaptive forgetfulness (BWAF), an efficient heuristic approximation of BDDM. BWAF requires only four registers of memory, and has $O(1)$ computational complexity. It also does not require parameter selection. 
+  \item BWAF was shown to be competitive on standard benchmarks, achieving the second highest F$_1$ score. It was also competitive on the synthetic triage data stream, again achieving the second highest F$_1$ score.
+%   \item We introduced a drift detection method which calculates exact posterior probabilities of concept drift having occurred at each time step, Bayesian drift detection method (BDDM). It also calculates posterior distributions over the values of performance metrics both before and after the occurrence concept drift.
+%   \item We also introduced beta with adaptive forgetfulness (BWAF), an efficient heuristic-based drift detection method inspired by BDDM. BWAF computes posterior probabilities of drift having occurred, although unlike BDDM, the posteriors for past time steps are not updated in light of new evidence. It is, however, very space and time efficient. It also does not require parameter tuning.
 \end{itemize}
 
 %-------------------------------------------------------------------
@@ -30,19 +41,25 @@ The following list highlights the major achievements of our research:
 
 \section{Limitations} \label{conclusions:limitations}
 
-We identify the following major limitations of this work, arranged by research objective.
+We identify the following major limitations of this work.
 
-\subsection{Early Warnings with Delayed Labelling}
+\subsection{Multiple Drift Detector}
 
-The main limitation of MDD concerns the kind of feature drifts it can provide early warnings for. By representing free-text as a bag of words, any changes in the composition of the text is undetectable. One way to mitigate this problem would be to use n-gram features. However, this would create a combinatorial explosion in the number of features. MDD also assumes independence of each of the features. Thus if the relationship between two features changes, but the distribution of the individual features, then this change will not trigger a feature drift warning.
+The purpose of this system was to provide early warnings of feature drift when label values are delayed compared to feature values. However, there are limitations to the types of feature drifts which can be detected. 
 
-\subsection{Error Reducibility}
+By representing free-text features as bags of words, all information about the arrangement of tokens is lost, and so only changes at the token-frequency level are detectable. MDD also assumes independence between features. Thus changes in the correlation between features are undetectable by MDD.
 
-The main limitation of CDDM is that it only works with calibrated models. This is problematic as many popular machine learning systems are not calibrated, such as na\"{i}ve Bayes, SVMs, and boosted trees.
+\subsection{Calibrated Drift Detection Method}
 
-\subsection{Quantifying Drift Uncertainty}
+In Chapter \ref{chapt:CDDM}, we identified two limitations of CDDM. The first was that it cannot detect ``small" deviations from miscalibration. The minimum detectable deviation depends on the window size and the detection threshold, as specified in Equation \ref{eq:window_size}. 
 
-The main limitation of BDDM is that it scales poorly, being $O(t^2)$ in time and $O(t)$ in space. It is thus very inefficient and probably impractical for high-volume data streams. This problem can be overcome by using the windowed version of BDDM, in which case BDDM becomes $O(tN)$ in time and $O(N)$, where $N$ is the size of the window. However, this entails a trade-off between efficiency and detection of gradual concept drift.
+The second limitation is that CDDM requires its model to be calibrated. Most machine learning methods require post-processing of probabilistic predictions to become calibrated \cite{calibrating}, and these can require large amounts of training data to achieve \cite{beyond_sigmoids} and are not necessarily robust against dataset drift \cite{dataset_drift}. CDDM will therefore not be practical until progress has been made on the problem of online calibration. 
+
+\subsection{Bayesian Concept Drift Detection}
+
+The main limitation of BDDM is that it scales poorly, being $O(t^2)$ in time and $O(t)$ in space. It is thus impractical for high-volume data streams. 
+
+The main limitation of BWAF is that the heuristics it uses to approximate BDDM are not well motivated theoretically. It is not known if they introduce biases or inefficiencies.  
 
 %-------------------------------------------------------------------
 % FUTURE WORK
@@ -50,30 +67,22 @@ The main limitation of BDDM is that it scales poorly, being $O(t^2)$ in time and
 
 \section{Future Work} \label{conclusions:future_word}
 
-Although we have devised workable solutions to our stated research objectives, there is still significant scope for validation and expansion of our methods. We suggest the follow as promising directions for future work.
+We suggest the follow as promising directions for future work.
 
-\subsection{Early Warnings with Delayed Labelling}
+\subsection{User Testing}
 
-We have demonstrated that the MDD framework can in principle provide early warnings of changes in the distribution of instances. However, it remains to be seen whether this can be achieved in practice to useful ends.
+In Chapter \ref{chapt:Introduction}, we motivated our work as bridging a gap between academic research on concept drift and real data science applications. We used GP referrals triage as a motivating example for this discussion. However, we have not yet shown that our algorithms actually help users in real applications.
 
-We intend as some near future work to integrate MDD into a decision support system for GP referrals triage as described in the introduction. With this practical deployment we will see whether MDD can genuinely add value to concept drift detection applications.
+It would therefore be valuable to evaluate our algorithms and frameworks with user tests and case studies. Are users able to effectively interpret the early warnings from MDD? How often do the kinds of false positives and false negatives that CDDM prevents come up in real data streams? We have argued that the probability distributions provided by BDDM and BWAF will help experts make expected utility calculations, but are real application domains to well-specified enough for this to be possible?
 
-Additionally, another area of future research for MDD is exploring alternative ways to efficiently detect drift in the distribution of instances which takes into account the dependence of features on one another. For this research direction, we could draw on the field of change-point detection.
+\subsection{Online Calibration}
 
-\subsection{Error Reducibility}
+CDDM assumes that models are calibrated, which is not true of most learning algorithms. Calibration can be achieved off-line via techniques such as calibration maps \cite{beyond_sigmoids}\cite{calibrating}, but these can require large samples of data \cite{beyond_sigmoids}. 
 
-As mentioned in the previous section, a major limitation of CDDM is that it requires the base learner to be make calibrated probabilistic predictions. This makes it a quite a narrow solution to the problem of differentiating reducible from irreducible error. A promising future research direction would be to pair CDDM with an online calibration system. Over the course of its deployment, a calibration map of the base learner would be built up, and changes in this calibration map would be detected by CDDM. This would extend the scope of CDDM to all learners which make probabilistic predictions.
+It would therefore be beneficial to investigate avenues by which CDDM could be applied to models which are not automatically calibrated. One way to achieve this is via calibrating learners online, an area which has not been well studied. 
 
-One intriguing possibility is to perform online calibration in a Bayesian manner. 
+\subsection{Bayesian Drift Detection}
 
-A major limitation of CDDM was that it required a probabilistic model to be calibrated. CDDM is therefore quite a narrow solution to the problem of differentiating between reducible and irreducible error. Useful
+BWAF has shown promise as a drift detector, achieving the second highest F$_1$ score of the detectors tested in the benchmark data streams. It would be worthwhile conducting further theoretical and experimental investigations into BWAF's performance. 
 
-As mentioned in the previous section, a major limitation of CDDM is that it requires the base learner to be calibrated. A promising direction of future research is therefore to extend the system to include some manner of online calibration. This way it could be deployed with any kind of learner. 
-
-One intriguing possibility is to perform online calibration in a Bayesian manner. That is, the objective probability of a successful trial conditional on the model's probabilistic assignments could be modelled as a beta distribution. There are potentially promising integrations of CDDM and BDDM or BWAF.
-
-\subsection{Quantifying Drift Uncertainty}
-
-The major limitation of BDDM is that it is not efficient. The windowed method solves this problem to some extent, but it is quite possible that there are other variants which are more efficient or more accurate. Exploring other alternatives is a promising area of future research. 
-
-It would also be worthwhile developing a theory for BWAF. Whether performance guarantees can be obtained is unknown. 
+Specifically, it would be worth investigating whether it is possible to prove theoretical guarantees on the false positive and false negative rate of BWAF. Additionally, experimentally determining under what circumstances BWAF tends to perform well or perform poorly. Can the computational efficiency of BWAF be significantly improved? Are there other heuristic approaches to Bayesian drift detection which achieve even better performance than BWAF?

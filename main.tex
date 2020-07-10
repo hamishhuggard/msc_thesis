@@ -44,9 +44,9 @@
 \begin{abstract}
 In many machine learning applications, the relationship being modelled may change over time, a phenomenon called concept drift. Most existing approaches to concept drift have assumed an artificially narrow specification of the problem. In this thesis we explore some new approaches to concept drift which introduce several new ``tricks" which help bridge the gap between academic concept drift detection and real data science applications. As a motivating example for our investigation, we consider a medical clinic where a decision support system is helping clinicians triage patients referred by GPs. As the triage decision making process evolves, the decision support system should be able to detect that its model has become outdated, and signal to a data scientist that it requires retraining.
 
-We first introduce the Multiple Drift Detector framework, in which a detector for several different types of concept drift is constructed out of a single ``narrow" drift detector. This allows for a more complete and interpretable monitoring of concept drift. Changes in the accuracy, precision, recall, accuracy, label distribution, or instance distribution can be detected, whereas typically only changes in accuracy are detected by existing drift detectors. We also present a graphical interface for MDD to assist understanding of how a data stream is evolving.
+We first introduce the Multiple Drift Detector framework, in which a detector for several different types of concept drift is constructed out of a single ``narrow" drift detector. This allows for a more complete and interpretable monitoring of concept drift. Changes in the accuracy, precision, recall, label distribution, or instance distribution can be detected, whereas typically only changes in accuracy are detected by existing drift detectors. We also present a graphical interface for MDD to assist understanding of how a data stream is evolving.
 
-Next, we introduce the calibrated drift detection method (CDDM), an algorithm which makes use of probabilistic predictions of models to detect increases in the reducible error, and not the the irreducible error, of a model. Both of these are detected by conventional drift detectors, which can result in unnecessary and expensive model retraining.
+Next, we introduce the calibrated drift detection method (CDDM), an algorithm which makes use of probabilistic predictions of models to detect increases in the reducible error, and not the  irreducible error, of a model. Both of these are detected by conventional drift detectors, which can result in unnecessary and expensive model retraining.
 
 Next, we present Bayesian drift detection method (BDDM), an algorithm which computes exact posterior probability distributions over possible drift locations and over the error rate of the model. This allows decisions about whether to retrain a model to be made on a rational, expected utility basis. We also introduce Bayes with adaptive forgetfulness (BWAF), which is a heuristic approximation of BDDM.
 
@@ -54,19 +54,21 @@ Finally, we experimentally validate our novel drift detection methods. We demons
 \end{abstract}
 
 \begin{acknowledgements}
-I would like to acknowledge and thank: 
-\begin{itemize}
-    \item {\bf The Precision Driven Health Partnership} for funding this work. Special thanks are due to {\bf Kelly Atkinson} for being my point of contact and support.
-    \item {\bf Edmond Zhang} for introducing me to this project and mentoring me in the field of medical data science. 
-    \item {\bf Yun Sing Koh} and {\bf Gillian Dobbie} for being generally swell thesis advisors, as well as encouraging me to submit a paper to SIGIR, and putting just enough pressure on me so that I actually got work done without being overwhelmed by guilt and anxiety. 
-    \item {\bf My past self}, for not procrastinating too much. Although he didn't remotely pull his weight, he did at least get the ball rolling, and he did do some good work on side-projects.
-    \item {\bf An unknown Mesopotamian clerk}, without whose invention of writing this thesis would not be possible.
-    \item {\bf My parents}, without whom I would not be possible.
-    \item {\bf Christelle Quilang} for giving me a backrub one time when I was writing code.
+I would like to acknowledge and thank the following people.
+
+{\bf The Precision Driven Health Partnership} for funding this work. Special thanks are due to {\bf Kelly Atkinson} for being my point of contact and support.
+
+{\bf Edmond Zhang} for introducing me to this project and mentoring me in the field of medical data science. 
+
+{\bf Yun Sing Koh} and {\bf Gillian Dobbie} for being generally swell thesis advisors, as well as encouraging me to submit a paper to SIGIR, and putting just enough pressure on me so that I actually got work done without being overwhelmed by guilt and anxiety. 
+
+{\bf My past self}, for not procrastinating too much. Although he didn't remotely pull his weight, he did at least get the ball rolling, and he did do some good work on side-projects.
+    % \item {\bf An unknown Mesopotamian clerk}, without whose invention of writing this thesis would not be possible.
+    % \item {\bf My parents}, without whom I would not be possible.
+    % \item {\bf Christelle Quilang} for giving me a backrub one time when I was writing code.
     % \item {\bf My cat} for her lukewarm interest in my existence.
-    \item {\bf COVID-19} for adding some variety to the months leading up to my thesis deadline.
-    \item And finally, any editors, proof-readers, markers, or gate keepers who can appreciate a joke.
-\end{itemize}
+    % \item {\bf COVID-19} for adding some variety to the months leading up to my thesis deadline.
+% \item And finally, any editors, proof-readers, markers, or gate keepers who can appreciate a joke.
 \end{acknowledgements}
 
 \chapter*{List of Publications}
@@ -82,6 +84,8 @@ Parts of Chapter \ref{chapt:CDDM} have been published in:
 \listoffigures
 
 \listoftables
+
+\listofalgorithms
 
 \mainmatter
 \input{Chapters/01_Introduction.tex}
